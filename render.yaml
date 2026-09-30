@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: goshala-care
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn "backend.app:create_app()" --bind 0.0.0.0:$PORT
+    envVars:
+      - key: SECRET_KEY
+        generateValue: true
+      - key: USE_SQLITE_FALLBACK
+        value: "true"
+      - key: FLASK_ENV
+        value: production
