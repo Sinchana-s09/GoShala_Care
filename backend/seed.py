@@ -1,3 +1,10 @@
+import sys
+import os
+from pathlib import Path
+
+# Ensure project root is in sys.path
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
 from datetime import datetime, date, timedelta
 import json
 from backend.database import get_db, create_all_tables

@@ -1,5 +1,6 @@
 import os
 from pathlib import Path
+from urllib.parse import quote_plus
 from dotenv import load_dotenv
 
 # Base directory paths
@@ -29,13 +30,16 @@ class Config:
         # Allow direct DATABASE_URL override if supplied
         if os.environ.get('DATABASE_URL'):
             return os.environ.get('DATABASE_URL')
-            
+
+        # URL-encode the password to handle special chars like @, #, etc.
+        encoded_password = quote_plus(cls.DB_PASSWORD) if cls.DB_PASSWORD else ''
+
         # Try MySQL connection string
-        if cls.DB_PASSWORD:
-            mysql_uri = f"mysql+pymysql://{cls.DB_USER}:{cls.DB_PASSWORD}@{cls.DB_HOST}:{cls.DB_PORT}/{cls.DB_NAME}?charset=utf8mb4"
+        if encoded_password:
+            mysql_uri = f"mysql+pymysql://{cls.DB_USER}:{encoded_password}@{cls.DB_HOST}:{cls.DB_PORT}/{cls.DB_NAME}?charset=utf8mb4"
         else:
             mysql_uri = f"mysql+pymysql://{cls.DB_USER}@{cls.DB_HOST}:{cls.DB_PORT}/{cls.DB_NAME}?charset=utf8mb4"
-            
+
         return mysql_uri
 
     # Model and Data paths
