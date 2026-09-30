@@ -1,255 +1,294 @@
-# GoShala Care — Early Detection & Management of Bovine Diseases
+﻿<div align="center">
 
-A production-quality web application built with **Python (Flask)**, **MySQL**, and **Machine Learning** for early cattle disease detection, longitudinal herd telemetry, and veterinary triage.
+# GoShala Care
 
----
+### Early Detection & Management of Bovine Diseases
 
-## 🌟 Philosophy & Core Idea
+A full-stack web application for **cattle health monitoring**, **disease detection**, and **veterinary triage** built for smallholder farmers and traditional gaushalas.
 
-Most academic and industrial cattle health systems depend on expensive IoT sensor collars, rumination boluses, and automated milking gates that are financially out of reach for smallholder farmers and traditional gaushalas. 
+[![Python](https://img.shields.io/badge/Python-3.10+-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
+[![Flask](https://img.shields.io/badge/Flask-2.x-000000?style=for-the-badge&logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
+[![SQLite](https://img.shields.io/badge/SQLite-Fallback-003B57?style=for-the-badge&logo=sqlite&logoColor=white)](https://www.sqlite.org/)
+[![MySQL](https://img.shields.io/badge/MySQL-8.0+-4479A1?style=for-the-badge&logo=mysql&logoColor=white)](https://www.mysql.com/)
+[![scikit-learn](https://img.shields.io/badge/scikit--learn-ML-F7931E?style=for-the-badge&logo=scikit-learn&logoColor=white)](https://scikit-learn.org/)
+[![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)](LICENSE)
 
-**GoShala Care** flips this paradigm:
-1. Farmers manually log **daily vitals and visible symptoms** in under 60 seconds through a mobile-friendly web interface.
-2. A **Two-Layer Hybrid Engine** evaluates the entry:
-   - **Layer 1 (Explainable Rule Engine)**: Evaluates strict biological thresholds (rectal temperature outside 38.0–39.3°C, feed cessation for 2+ days, acute milk drops, and specific symptom combinations) directly backed by the database's disease knowledge base.
-   - **Layer 2 (Machine Learning Engine)**: Analyzes rolling 3–7 day longitudinal trends (temperature drift, % milk yield drop, consecutive feed deficit counts) using Random Forest / Gradient Boosting tabular models.
-3. If risk is **Moderate** or **High**, the system automatically generates an active case in the **Veterinary Review Queue**.
-4. A dedicated **Computer Vision Photo Scan** module allows farmers to upload photos of cattle skin, udders, or hooves to detect lesions (Lumpy Skin Disease, Mastitis, Foot Rot) with instant confidence ratings.
-
----
-
-## 🛠️ Tech Stack
-
-- **Backend**: Python 3.10+ with **Flask** (Modular Blueprints architecture: Auth, Farmer, Vet, Admin, Library, API).
-- **Database**: **MySQL 8.0+** using `PyMySQL` and `mysql-connector-python` with **SQLAlchemy ORM**. Full schema provided in `backend/schema.sql` (InnoDB, foreign keys, constraints, and seed data). Automatic SQLite fallback enables immediate out-of-the-box evaluation if MySQL credentials are not yet configured.
-- **Frontend**: Server-rendered **Jinja2 templates** with vanilla modern CSS3 and responsive JavaScript. All frontend assets are strictly contained within `frontend/templates/` and `frontend/static/`.
-- **Machine Learning**: Standalone pipelines in `backend/ml_pipeline/` leveraging `scikit-learn`, `Pillow`, `pandas`, and `numpy`. Trains tabular models on longitudinal vitals CSVs and visual classifiers on lesion image folders, saving weights in `backend/models/`.
+</div>
 
 ---
 
-## 📁 Project Structure
+## Overview
+
+Most cattle health systems depend on expensive IoT sensor hardware that is financially out of reach for smallholder farmers. **GoShala Care** takes a different approach:
+
+- Farmers log daily vitals and visible symptoms in under 60 seconds via a mobile-friendly interface
+- A **Two-Layer Hybrid Engine** (Rule Engine + ML) analyzes entries and generates risk scores
+- **Moderate/High risk** cases are automatically forwarded to the **Veterinary Review Queue**
+- A **Photo Scan** module detects skin lesions (Lumpy Skin Disease, Mastitis, Foot Rot) from uploaded images
+- A **Vet Contacts Directory** provides quick access to nearby veterinary clinics with emergency contacts
+
+---
+
+## Features
+
+| Feature | Description |
+|---|---|
+| **Role-Based Auth** | Farmer self-registration, Vet login, Admin portal |
+| **Herd Management** | Add/manage cows with full profile and history |
+| **Daily Vitals Logging** | Temperature, milk yield, feed intake, symptoms |
+| **AI Risk Assessment** | Two-layer hybrid: Rule Engine + Random Forest ML |
+| **Photo Disease Scan** | Upload cattle images for CV-based lesion classification |
+| **Vitals Comparison** | Historical trend charts per cow |
+| **Vet Triage Queue** | Vets receive auto-generated cases with AI explanations |
+| **Vet Contacts** | Searchable directory of clinics and emergency contacts |
+| **Disease Library** | Public reference for common bovine diseases |
+| **Admin Dashboard** | User management, disease KB, ML pipeline status |
+
+---
+
+## Tech Stack
 
 ```
-d:/goshala/
+Backend   -> Python 3.10+ / Flask (Blueprints) / SQLAlchemy ORM
+Database  -> MySQL 8.0+ (primary) / SQLite (auto-fallback for dev)
+Frontend  -> Jinja2 templates / Vanilla CSS3 / JavaScript
+ML        -> scikit-learn / pandas / numpy / Pillow
+Auth      -> Flask-Login / Werkzeug password hashing
+```
+
+---
+
+## Project Structure
+
+```
+GoShala_Care/
 ├── backend/
-│   ├── app.py                   # Flask Application Factory & routing
-│   ├── config.py                # Environment configuration reader
-│   ├── database.py              # SQLAlchemy engine & session factory
-│   ├── db_models.py             # ORM models (User, Cow, Vitals, Case, Disease, etc.)
-│   ├── schema.sql               # Full MySQL DDL schema + initial seed data
-│   ├── seed.py                  # Database seeder (users, diseases, demo cows)
-│   ├── rule_engine.py           # Two-layer explainable clinical threshold engine
-│   ├── ml_service.py            # Live runtime inference service for Flask
-│   ├── models/                  # Saved ML models and evaluation metrics
-│   │   ├── vitals_classifier.joblib
-│   │   ├── vitals_scaler.joblib
-│   │   ├── image_classifier.joblib
-│   │   └── metrics.json
-│   ├── ml_pipeline/             # Visible 7-stage Data Science Pipeline
-│   │   ├── data_cleaner.py      # Missing value, bounds & duplicate filtering
-│   │   ├── feature_engine.py    # Rolling 3-7d trend & symptom engineering
-│   │   ├── train_tabular.py     # Tabular ML training & evaluation
-│   │   └── train_image.py       # Visual image scan training & evaluation
-│   └── routes/                  # Modular route blueprints
-│       ├── auth.py              # Login, Farmer self-registration, RBAC
-│       ├── farmer.py            # Herd management, vitals, photo scan, map
-│       ├── vet.py               # Triage queue, case review & prescriptions
-│       ├── admin.py             # User admin, vet directory, KB, ML telemetry
-│       ├── library.py           # Searchable public disease reference
-│       └── api.py               # Chart.js time-series endpoints
+│   ├── app.py                   # Flask app factory & blueprint registration
+│   ├── config.py                # Environment config reader
+│   ├── database.py              # SQLAlchemy engine & session (MySQL + SQLite fallback)
+│   ├── db_models.py             # ORM models: User, Cow, VitalsLog, Case, Disease
+│   ├── schema.sql               # Full MySQL DDL schema + seed data
+│   ├── seed.py                  # Database seeder
+│   ├── rule_engine.py           # Explainable clinical threshold rule engine
+│   ├── ml_service.py            # Runtime ML inference service
+│   ├── vitals_comparator.py     # Historical vitals comparison logic
+│   ├── models/
+│   │   └── metrics.json         # Saved model evaluation metrics
+│   ├── ml_pipeline/
+│   │   ├── data_cleaner.py      # Data validation & missing value handling
+│   │   ├── feature_engine.py    # 3-7 day rolling trend feature engineering
+│   │   ├── train_tabular.py     # Tabular vitals ML training
+│   │   └── train_image.py       # Image classification training
+│   └── routes/
+│       ├── auth.py              # Login, register, logout
+│       ├── farmer.py            # Herd, vitals, photo scan, vet contacts
+│       ├── vet.py               # Case triage & prescription
+│       ├── admin.py             # Admin management & ML pipeline
+│       ├── library.py           # Disease reference library
+│       └── api.py               # Chart.js JSON API endpoints
 ├── frontend/
 │   ├── static/
-│   │   ├── css/style.css        # Warm agrarian design system & typography
-│   │   └── js/main.js           # Live client validations & UI interactions
-│   └── templates/               # Server-rendered Jinja2 templates
-│       ├── base.html            # Persistent sidebar & topbar layout
-│       ├── auth/                # Login and Farmer registration
-│       ├── farmer/              # Farmer dashboard, cows, vitals log, map
-│       ├── vet/                 # Triage queue and case detail review
-│       ├── admin/               # User, vet, disease and ML pipeline status
-│       └── library/             # Disease reference library
+│   │   ├── css/style.css
+│   │   └── js/main.js
+│   └── templates/
+│       ├── base.html
+│       ├── auth/
+│       ├── farmer/
+│       ├── vet/
+│       ├── admin/
+│       └── library/
 ├── data/
-│   ├── vitals/                  # Place cow vitals CSV files here
-│   ├── train/                   # Training images (healthy, lumpy_skin, etc.)
+│   ├── vitals/                  # Place CSV vitals datasets here
+│   ├── train/                   # Training images
 │   └── val/                     # Validation images
-├── uploads/                     # Uploaded cattle photos and lesion scans
-├── train_model.py               # Master ML pipeline orchestrator
-├── run.py                       # Application server entrypoint
-├── requirements.txt             # Python package dependencies
-├── .env.example                 # Environment configuration template
-├── .env                         # Active configuration
+├── uploads/                     # User-uploaded cattle photos
+├── run.py
+├── train_model.py
+├── requirements.txt
+├── .env.example
 └── README.md
 ```
 
 ---
 
-## 🚀 Quick Start Guide
+## Quick Start
 
-### 1. Prerequisites & Virtual Environment
-Ensure Python 3.10+ is installed on your system.
+### 1. Clone the Repository
 
 ```bash
-# Clone or navigate to the repository
-cd d:/goshala
+git clone https://github.com/Sinchana-s09/GoShala_Care.git
+cd GoShala_Care
+```
 
-# Create and activate a virtual environment
+### 2. Create a Virtual Environment
+
+```bash
 python -m venv venv
-# On Windows PowerShell:
-.\venv\Scripts\Activate.ps1
-# On Linux/macOS:
-source venv/bin/activate
 
-# Install required dependencies
+# Windows
+.\venv\Scripts\Activate.ps1
+
+# Linux / macOS
+source venv/bin/activate
+```
+
+### 3. Install Dependencies
+
+```bash
 pip install -r requirements.txt
 ```
 
----
+### 4. Configure Environment Variables
 
-### 2. Configure Database Connection
+```bash
+cp .env.example .env
+```
 
-Create or edit your `.env` file in the project root:
+Edit `.env`:
 
 ```ini
-# Flask Security
-SECRET_KEY=goshala-care-production-secret-key-928471
+SECRET_KEY=your-secret-key-here
 FLASK_ENV=development
 
-# MySQL Database Settings
 DB_HOST=localhost
 DB_PORT=3306
 DB_USER=root
 DB_PASSWORD=your_mysql_password
 DB_NAME=goshala_db
-
-# Fallback to local SQLite if MySQL credentials are empty during development
-USE_SQLITE_FALLBACK=true
 ```
 
-#### Setting up MySQL:
-1. Log into your MySQL console:
-   ```bash
-   mysql -u root -p
-   ```
-2. Execute the provided `backend/schema.sql`:
-   ```sql
-   source d:/goshala/backend/schema.sql;
-   ```
-   *(Or run: `mysql -u root -p < backend/schema.sql`)*
+> **Note:** If MySQL credentials are not set or connection fails, the app **automatically falls back to SQLite** (`goshala.db`) with no extra setup needed.
 
----
+### 5. (Optional) Set Up MySQL
 
-### 3. Seed Database with Default Users & Knowledge Base
+```bash
+mysql -u root -p < backend/schema.sql
+```
 
-Run the automated seeder script to populate default user roles, clinical diseases, symptoms, sample clinics, and demo cows:
+### 6. Seed the Database
 
 ```bash
 python -m backend.seed
 ```
 
-#### Default Credentials:
-| Role | Username | Email | Password | Permissions |
-| :--- | :--- | :--- | :--- | :--- |
-| **Administrator** | `admin` | `admin@goshala.org` | `Admin@123` | User admin, vet directory, disease library, ML pipeline |
-| **Veterinarian** | `dr_ramesh` | `dr.ramesh@kamdhenuvet.in` | `Vet@123` | Case triage queue, diagnosis & prescription response |
-| **Farmer** | `ramesh_farmer` | `farmer.ramesh@gmail.com` | `Farmer@123` | Herd management, vitals logging, photo scan, map |
+#### Default Login Credentials
 
-*(Farmers can also freely register new accounts from the `/register` page).*
+| Role | Username | Password |
+|---|---|---|
+| Admin | `admin` | `Admin@123` |
+| Veterinarian | `dr_ramesh` | `Vet@123` |
+| Farmer | `ramesh_farmer` | `Farmer@123` |
 
----
+> Farmers can also **self-register** at `/register`.
 
-### 4. Train the ML Models
+### 7. (Optional) Train ML Models
 
-Train both the **Tabular Vitals Model** and the **Computer Vision Lesion Model** using the master orchestrator:
+Place datasets in `data/vitals/` and `data/train/<class>/`, then:
 
 ```bash
 python train_model.py
 ```
 
-- **Dropping External Datasets**:
-  - Place your tabular CSVs into `data/vitals/`.
-  - Place your lesion photos into subfolders under `data/train/<class>/` (e.g. `healthy`, `mastitis`, `lumpy_skin`, `foot_lesion`).
-  - Run `python train_model.py` to ingest, clean, extract features, and retrain both models. Model weights and per-class metrics will be saved into `backend/models/`.
-
----
-
-### 5. Launch the Web Application
-
-Start the Flask development server:
+### 8. Run the App
 
 ```bash
 python run.py
 ```
 
-Open your browser at:
-👉 **[http://127.0.0.1:5000](http://127.0.0.1:5000)**
+Open your browser at: **http://127.0.0.1:5000**
 
 ---
 
-## 🔬 Classification & Triage Logic
+## Application Routes
 
-### Layer 1: Explainable Rule & Threshold Layer
-Normal bovine rectal temperature is **38.0°C to 39.3°C**. The rule engine flags immediate physiological alerts:
-- **Temperature > 40.2°C**: Critical Hyperthermia (acute sepsis / toxemia).
-- **Temperature < 37.5°C**: Severe Hypothermia (circulatory collapse / advanced milk fever).
-- **Feed/Water Cessation**: `none` for 2+ consecutive days.
-- **Acute Milk Drop**: Yield drop $>35\%$ compared to the cow's recent rolling baseline.
-- **Symptom Combinations**:
-  - `hot/swollen udder` + `acute milk drop` $\rightarrow$ **Mastitis**
-  - `mouth blisters / drooling` + `limping / hoof sores` $\rightarrow$ **Foot-and-Mouth Disease (FMD)**
-  - `round cutaneous nodules` + `fever` $\rightarrow$ **Lumpy Skin Disease (LSD)**
-  - `unable to stand (downer)` + `cold ears / muscle tremors` $\rightarrow$ **Milk Fever (Hypocalcemia)**
-  - `distended left flank (bloat)` + `labored grunting` $\rightarrow$ **Acute Bloat**
-  - `sweet acetone odor in breath/milk` + `milk drop` $\rightarrow$ **Ketosis**
-
-*Every rule triggered generates a transparent, plain-English explanation displayed directly to the farmer and veterinarian.*
-
-### Layer 2: Machine Learning Layer
-- Computes trend features: `temperature_drift` ($T_{\text{today}} - \overline{T}_{3\text{d}}$), `milk_pct_change` ($\frac{M_{\text{today}} - \overline{M}_{3\text{d}}}{\overline{M}_{3\text{d}}}$), and cumulative feed disturbance counts.
-- Evaluates feature vector via a trained `RandomForestClassifier` with balanced class weights.
-- Generates probability distribution: $P(\text{Low}), P(\text{Moderate}), P(\text{High})$.
-
-### Combined Risk Decision:
-- If Rule Layer detects a High emergency or ML $P(\text{High}) \ge 0.55 \rightarrow$ **High Risk**.
-- If Rule Layer detects Moderate or ML $P(\text{Moderate}) \ge 0.45 \rightarrow$ **Moderate Risk**.
-- Otherwise $\rightarrow$ **Low Risk**.
-- **Moderate** or **High** risk logs automatically spawn a triage case in the veterinarian queue.
+| Route | Role | Description |
+|---|---|---|
+| `/` | All | Redirects to role dashboard or login |
+| `/login` | All | Login page |
+| `/register` | Guest | Farmer self-registration |
+| `/farmer/dashboard` | Farmer | Overview & milk trend chart |
+| `/farmer/cows` | Farmer | Herd list & add cow |
+| `/farmer/log_vitals` | Farmer | Log daily vitals & symptoms |
+| `/farmer/photo_scan` | Farmer | Upload photo for disease detection |
+| `/farmer/vets_map` | Farmer | Veterinary contacts directory |
+| `/diseases` | All | Public disease reference library |
+| `/vet/dashboard` | Vet | Triage queue with AI case summaries |
+| `/admin/dashboard` | Admin | User & system management |
+| `/admin/pipeline_status` | Admin | ML pipeline health & retraining |
 
 ---
 
-## 📊 Admin ML Pipeline Status Dashboard
+## Disease Detection Logic
 
-Accessible to Administrators at `/admin/pipeline_status`, this dashboard renders all 7 steps of the data science workflow:
-1. **Ingestion**: Tracks all ingested CSV files and image folders.
-2. **Cleaning & Validation**: Displays duplicate image hashes filtered, invalid temperatures ($<34^\circ\text{C}$ or $>44^\circ\text{C}$) scrubbed, and missing values imputed.
-3. **EDA Summary**: Class distributions, mean temperatures, and symptom frequencies.
-4. **Feature Engineering**: Feature importance rankings for rolling 3–7 day trend signals.
-5. **Model Training**: Architecture details for Random Forest and visual classifiers.
-6. **Evaluation**: Per-class Precision, Recall, and F1-Scores for Low, Moderate, and High classes.
-7. **Retraining**: One-click retraining button that executes the pipeline and hot-reloads model weights into the active Flask server.
+### Layer 1 - Rule Engine (Explainable)
 
----
+| Condition | Possible Disease |
+|---|---|
+| Temperature > 40.2C | Sepsis / Toxemia |
+| Temperature < 37.5C | Milk Fever |
+| Feed = none for 2+ days | Multiple |
+| Milk drop > 35% | Mastitis / Ketosis |
+| Hot/swollen udder + milk drop | Mastitis |
+| Mouth blisters + limping | FMD |
+| Cutaneous nodules + fever | Lumpy Skin Disease |
+| Downer + cold ears | Milk Fever |
+| Distended flank + grunting | Bloat |
+| Acetone breath + milk drop | Ketosis |
 
-## 🗺️ Interactive Vet Directory & First-Aid Reference
+### Layer 2 - Machine Learning (Predictive)
 
-Accessible at `/farmer/vets_map`:
-- Uses **Leaflet.js** and OpenStreetMap to display geocoded veterinary clinics with 24/7 emergency dispatch tags and direct phone dial buttons.
-- Features a clinical accordion providing step-by-step first-aid protocols:
-  - **Bloat**: Sternal elevation, wooden mouth bit to stimulate belching, vegetable oil administration, emergency trocarization guidance.
-  - **Downer Cow**: Sternal chest resting position with straw bales, avoiding oral drenching to prevent aspiration pneumonia, extremity warming.
-  - **FMD Blister Hygiene**: 1% Potassium Permanganate antiseptic mouth wash, zinc oxide hoof barrier.
-  - **Heat Stress**: Cold water neck/spine evaporation, shade relocation.
+Uses rolling 3-7 day trend features (temperature drift, % milk change, feed deficit count) to compute risk probabilities using a `RandomForestClassifier`.
 
----
+### Combined Decision
 
-## 🔮 Future Extension to IoT Sensors
-
-While GoShala Care is designed specifically to avoid mandatory hardware investments, the platform's backend is modularly structured to easily ingest automated sensor feeds in the future:
-1. **Ear Tag Temperature Sensors**: Can push hourly temperature readings to a REST endpoint (`POST /api/vitals/stream`) using MQTT or HTTP.
-2. **Automated Milk Meters**: Smart milking machines can publish daily per-cow yield data directly to the `vitals_logs` table.
-3. **Pedometer Activity Collars**: Can log step counts to compute rumination and estrus deficit scores alongside the existing feed intake parameters.
+| Result | Trigger |
+|---|---|
+| **High Risk** (auto vet case) | Rule: High OR ML P(High) >= 0.55 |
+| **Moderate Risk** (auto vet case) | Rule: Moderate OR ML P(Moderate) >= 0.45 |
+| **Low Risk** | Otherwise |
 
 ---
 
-## 📜 License & Acknowledgments
+## Photo Disease Scan
 
-Built for farmers, gaushalas, and bovine practitioners committed to ethical livestock welfare and data-driven agricultural science.
+Upload a photo of cattle skin, udder, or hooves at `/farmer/photo_scan`:
+
+- Supports JPG, PNG, WebP, BMP
+- Drag-and-drop or click-to-upload
+- Instant confidence rating with disease classification
+- Results logged to database for veterinary review
+
+---
+
+## Future Extensions
+
+- **IoT Integration**: REST endpoint ready for ear-tag sensors & milk meters
+- **Mobile App**: PWA-ready frontend for offline vitals entry
+- **Cloud Deployment**: Docker + Gunicorn + Nginx support
+- **Analytics**: Herd-level health trend dashboards
+
+---
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch: `git checkout -b feature/my-feature`
+3. Commit changes: `git commit -m "Add my feature"`
+4. Push: `git push origin feature/my-feature`
+5. Open a Pull Request
+
+---
+
+## License
+
+This project is licensed under the **MIT License**.
+
+---
+
+<div align="center">
+
+Built with love for farmers, gaushalas, and bovine practitioners committed to ethical livestock welfare.
+
+**Star this repo if you find it useful!**
+
+</div>
