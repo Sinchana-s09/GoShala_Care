@@ -1,0 +1,219 @@
+{% extends 'base.html' %}
+
+{% block title %}ML Pipeline & Model Telemetry - GoShala Care{% endblock %}
+{% block page_title %}Data Science Pipeline & Model Telemetry{% endblock %}
+{% block page_subtitle %}Live audit of dataset ingestion, automated sanitization, feature engineering, and per-class model evaluation{% endblock %}
+
+{% block topbar_actions %}
+<form method="POST" action="{{ url_for('admin.retrain_models') }}" style="display: inline;">
+    <button type="submit" class="btn btn-primary btn-sm" onclick="return confirm('Retrain both Tabular and Visual ML models on latest dataset files?')">
+        <i class="bi bi-arrow-repeat"></i> Trigger Pipeline Retrain
+    </button>
+</form>
+{% endblock %}
+
+{% block content %}
+<!-- 7-Stage Pipeline Pipeline Architecture Visualizer -->
+<div class="card" style="background: linear-gradient(135deg, #1b4332 0%, #122c21 100%); color: white; margin-bottom: 28px;">
+    <div class="card-body" style="padding: 24px;">
+        <h3 style="color: white; margin-bottom: 14px; font-size: 1.2rem;">
+            <i class="bi bi-diagram-3-fill text-warning"></i> End-to-End Operational Cattle Health ML Pipeline
+        </h3>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; text-align: center;">
+            <div style="background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); border-radius: 8px; padding: 12px 8px;">
+                <span style="font-size: 0.72rem; color: #f59e0b; font-weight: 700;">STAGE 1</span>
+                <strong style="display: block; font-size: 0.82rem; margin-top: 2px;">Ingestion</strong>
+                <span style="font-size: 0.7rem; color: #a7f3d0;">CSV & Folders</span>
+            </div>
+            <div style="background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); border-radius: 8px; padding: 12px 8px;">
+                <span style="font-size: 0.72rem; color: #f59e0b; font-weight: 700;">STAGE 2</span>
+                <strong style="display: block; font-size: 0.82rem; margin-top: 2px;">Data Cleaning</strong>
+                <span style="font-size: 0.7rem; color: #a7f3d0;">Bounds & Dedup</span>
+            </div>
+            <div style="background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); border-radius: 8px; padding: 12px 8px;">
+                <span style="font-size: 0.72rem; color: #f59e0b; font-weight: 700;">STAGE 3</span>
+                <strong style="display: block; font-size: 0.82rem; margin-top: 2px;">EDA Summary</strong>
+                <span style="font-size: 0.7rem; color: #a7f3d0;">Class Balance</span>
+            </div>
+            <div style="background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); border-radius: 8px; padding: 12px 8px;">
+                <span style="font-size: 0.72rem; color: #f59e0b; font-weight: 700;">STAGE 4</span>
+                <strong style="display: block; font-size: 0.82rem; margin-top: 2px;">Feature Eng.</strong>
+                <span style="font-size: 0.7rem; color: #a7f3d0;">Rolling 3-7d Drift</span>
+            </div>
+            <div style="background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); border-radius: 8px; padding: 12px 8px;">
+                <span style="font-size: 0.72rem; color: #f59e0b; font-weight: 700;">STAGE 5</span>
+                <strong style="display: block; font-size: 0.82rem; margin-top: 2px;">Model Training</strong>
+                <span style="font-size: 0.7rem; color: #a7f3d0;">RF + Visual CNN</span>
+            </div>
+            <div style="background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); border-radius: 8px; padding: 12px 8px;">
+                <span style="font-size: 0.72rem; color: #f59e0b; font-weight: 700;">STAGE 6</span>
+                <strong style="display: block; font-size: 0.82rem; margin-top: 2px;">Evaluation</strong>
+                <span style="font-size: 0.7rem; color: #a7f3d0;">F1, Recall, Prec</span>
+            </div>
+            <div style="background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); border-radius: 8px; padding: 12px 8px;">
+                <span style="font-size: 0.72rem; color: #f59e0b; font-weight: 700;">STAGE 7</span>
+                <strong style="display: block; font-size: 0.82rem; margin-top: 2px;">Integration</strong>
+                <span style="font-size: 0.7rem; color: #a7f3d0;">Live Triage API</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- SECTION 1: TABULAR VITALS & SYMPTOM MODEL -->
+<div class="card" style="margin-bottom: 28px;">
+    <div class="card-header">
+        <h3><i class="bi bi-table text-primary"></i> 1. Tabular Model: Rolling Trends & Symptom Risk Classifier</h3>
+        <span style="font-size: 0.82rem; color: var(--text-muted);">
+            Last Trained: <strong>{{ tabular.get('last_trained', 'Not yet trained') }}</strong>
+        </span>
+    </div>
+    <div class="card-body">
+        <!-- Overview Stats -->
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 24px;">
+            <div style="background: var(--bg-subtle); padding: 16px; border-radius: var(--radius-sm);">
+                <span style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase;">Overall Accuracy</span>
+                <div style="font-size: 1.8rem; font-weight: 700; color: var(--brand-primary); font-family: var(--font-heading);">
+                    {{ (tabular.get('accuracy', 0) * 100)|round(2) }}%
+                </div>
+            </div>
+            <div style="background: var(--bg-subtle); padding: 16px; border-radius: var(--radius-sm);">
+                <span style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase;">Total Cleaned Rows</span>
+                <div style="font-size: 1.8rem; font-weight: 700; color: var(--brand-accent); font-family: var(--font-heading);">
+                    {{ tabular.get('eda', {}).get('total_samples', 0) }}
+                </div>
+            </div>
+            <div style="background: var(--bg-subtle); padding: 16px; border-radius: var(--radius-sm);">
+                <span style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase;">Dataset Mean Temp</span>
+                <div style="font-size: 1.8rem; font-weight: 700; color: #0284c7; font-family: var(--font-heading);">
+                    {{ tabular.get('eda', {}).get('mean_temp', 38.5) }}°C
+                </div>
+            </div>
+            <div style="background: var(--bg-subtle); padding: 16px; border-radius: var(--radius-sm);">
+                <span style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase;">Dataset Mean Milk</span>
+                <div style="font-size: 1.8rem; font-weight: 700; color: var(--risk-low); font-family: var(--font-heading);">
+                    {{ tabular.get('eda', {}).get('mean_milk', 12.0) }} L
+                </div>
+            </div>
+        </div>
+
+        <!-- Per-Class Evaluation Metrics (Precision, Recall, F1) -->
+        <h4 style="font-size: 1rem; color: var(--brand-primary); margin-bottom: 12px;">
+            <i class="bi bi-check2-all"></i> Stage 6: Per-Class Evaluation Metrics (Imbalanced Triage Validation)
+        </h4>
+        <div class="table-responsive" style="margin-bottom: 24px;">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Disease Risk Class</th>
+                        <th>Precision</th>
+                        <th>Recall (Sensitivity)</th>
+                        <th>F1-Score</th>
+                        <th>Validation Support</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for cls_name, m in tabular.get('per_class', {}).items() %}
+                        <tr>
+                            <td><span class="badge-risk {{ cls_name }}">{{ cls_name }}</span></td>
+                            <td><strong>{{ (m.precision * 100)|round(1) }}%</strong></td>
+                            <td><strong>{{ (m.recall * 100)|round(1) }}%</strong></td>
+                            <td><strong style="color: var(--brand-primary);">{{ (m.f1_score * 100)|round(1) }}%</strong></td>
+                            <td>{{ m.support }} samples</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Cleaning Audit & Top Feature Importance -->
+        <div style="display: grid; grid-template-columns: 1.2fr 1fr; gap: 20px;">
+            <div style="background: var(--bg-subtle); padding: 18px; border-radius: var(--radius-sm); border: 1px solid var(--border-color);">
+                <h4 style="font-size: 0.95rem; color: var(--brand-primary); margin-bottom: 10px;">
+                    <i class="bi bi-shield-check"></i> Stage 2: Data Cleaning & Sanitization Log
+                </h4>
+                <ul style="font-size: 0.85rem; color: var(--text-secondary); line-height: 1.6; padding-left: 20px;">
+                    {% for item in tabular.get('clean_report', {}).get('cleaning_log', []) %}
+                        <li>{{ item }}</li>
+                    {% else %}
+                        <li>Initial dataset loaded without null violations.</li>
+                    {% endfor %}
+                </ul>
+            </div>
+
+            <div style="background: var(--bg-subtle); padding: 18px; border-radius: var(--radius-sm); border: 1px solid var(--border-color);">
+                <h4 style="font-size: 0.95rem; color: var(--brand-accent); margin-bottom: 10px;">
+                    <i class="bi bi-bar-chart-line"></i> Top Informative Rolling Trend Features
+                </h4>
+                <div style="display: flex; flex-direction: column; gap: 8px;">
+                    {% for feat, imp in tabular.get('top_features', {}).items() %}
+                        <div style="display: flex; justify-content: space-between; font-size: 0.82rem;">
+                            <span>{{ feat.replace('_', ' ').title() }}</span>
+                            <strong>{{ (imp * 100)|round(2) }}%</strong>
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- SECTION 2: COMPUTER VISION SCAN MODEL -->
+<div class="card">
+    <div class="card-header">
+        <h3><i class="bi bi-camera-fill text-success"></i> 2. Visual Model: Cattle Lesion & Scan Classifier</h3>
+        <span style="font-size: 0.82rem; color: var(--text-muted);">
+            Last Trained: <strong>{{ image.get('last_trained', 'Not yet trained') }}</strong>
+        </span>
+    </div>
+    <div class="card-body">
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 24px;">
+            <div style="background: var(--bg-subtle); padding: 16px; border-radius: var(--radius-sm);">
+                <span style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase;">Visual Model Accuracy</span>
+                <div style="font-size: 1.8rem; font-weight: 700; color: var(--brand-primary); font-family: var(--font-heading);">
+                    {{ (image.get('accuracy', 0) * 100)|round(2) }}%
+                </div>
+            </div>
+            <div style="background: var(--bg-subtle); padding: 16px; border-radius: var(--radius-sm);">
+                <span style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase;">Image Classes Trained</span>
+                <div style="font-size: 1.8rem; font-weight: 700; color: var(--brand-accent); font-family: var(--font-heading);">
+                    {{ image.get('classes', [])|length }}
+                </div>
+            </div>
+            <div style="background: var(--bg-subtle); padding: 16px; border-radius: var(--radius-sm);">
+                <span style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase;">Duplicate Images Filtered</span>
+                <div style="font-size: 1.8rem; font-weight: 700; color: var(--risk-low); font-family: var(--font-heading);">
+                    {{ image.get('audit_report', {}).get('duplicate_images', 0) }}
+                </div>
+            </div>
+        </div>
+
+        <h4 style="font-size: 1rem; color: var(--brand-primary); margin-bottom: 12px;">
+            <i class="bi bi-check2-all"></i> Visual Classes Performance Breakdown
+        </h4>
+        <div class="table-responsive">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Pathological Class</th>
+                        <th>Precision</th>
+                        <th>Recall</th>
+                        <th>F1-Score</th>
+                        <th>Validation Images</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for c_name, m in image.get('per_class', {}).items() %}
+                        <tr>
+                            <td><strong style="text-transform: capitalize;">{{ c_name.replace('_', ' ') }}</strong></td>
+                            <td><strong>{{ (m.precision * 100)|round(1) }}%</strong></td>
+                            <td><strong>{{ (m.recall * 100)|round(1) }}%</strong></td>
+                            <td><strong style="color: var(--brand-primary);">{{ (m.f1_score * 100)|round(1) }}%</strong></td>
+                            <td>{{ m.support }} images</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

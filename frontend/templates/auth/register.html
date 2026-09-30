@@ -1,0 +1,77 @@
+{% extends 'base.html' %}
+
+{% block title %}Farmer Registration - GoShala Care{% endblock %}
+{% block page_title %}Farmer Registration{% endblock %}
+{% block page_subtitle %}Join GoShala Care to safeguard your livestock with early disease detection & veterinary advisory{% endblock %}
+
+{% block content %}
+<div style="max-width: 580px; margin: 20px auto;">
+    <div class="card" style="box-shadow: var(--shadow-lg);">
+        <div class="card-header" style="text-align: center; display: block; padding: 28px 24px 20px;">
+            <div style="width: 56px; height: 56px; background: linear-gradient(135deg, #d97706, #b45309); color: white; border-radius: 12px; display: inline-flex; align-items: center; justify-content: center; font-size: 28px; margin-bottom: 12px;">
+                <i class="bi bi-person-badge"></i>
+            </div>
+            <h2>Register as a Cattle Farmer</h2>
+            <p style="color: var(--text-muted); font-size: 0.9rem; margin-top: 4px;">Free access to herd tracking, AI disease screening & vet network</p>
+        </div>
+
+        <div class="card-body" style="padding: 28px 30px;">
+            <form method="POST" action="{{ url_for('auth.register') }}">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label" for="full_name">Full Name *</label>
+                        <input type="text" id="full_name" name="full_name" class="form-control" placeholder="e.g. Ramesh Bhai Patel" required autofocus>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="username">Username *</label>
+                        <input type="text" id="username" name="username" class="form-control" placeholder="e.g. ramesh_farmer" required>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="email">Email Address *</label>
+                    <input type="email" id="email" name="email" class="form-control" placeholder="e.g. farmer.ramesh@gmail.com" required>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label" for="phone">Phone / WhatsApp Number</label>
+                        <input type="text" id="phone" name="phone" class="form-control" placeholder="+91 98765 43210">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="location">Village / District / State</label>
+                        <input type="text" id="location" name="location" class="form-control" placeholder="e.g. Anand, Gujarat">
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label" for="password">Password *</label>
+                        <input type="password" id="password" name="password" class="form-control" placeholder="Min. 6 characters" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="confirm_password">Confirm Password *</label>
+                        <input type="password" id="confirm_password" name="confirm_password" class="form-control" placeholder="Repeat password" required>
+                    </div>
+                </div>
+
+                <div style="background-color: var(--bg-subtle); padding: 12px 16px; border-radius: var(--radius-sm); font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 24px;">
+                    <i class="bi bi-shield-check text-success"></i> 
+                    Your herd vitals and location data are strictly confidential and shared only with licensed veterinarians when you submit cases.
+                </div>
+
+                <button type="submit" class="btn btn-primary" style="width: 100%; justify-content: center; padding: 12px; font-size: 1rem;">
+                    <i class="bi bi-check2-circle"></i> Create Farmer Account
+                </button>
+            </form>
+
+            <div style="margin-top: 26px; padding-top: 20px; border-top: 1px solid var(--border-color); text-align: center;">
+                <p style="font-size: 0.9rem; color: var(--text-secondary);">
+                    Already registered? 
+                    <a href="{{ url_for('auth.login') }}" style="font-weight: 600; color: var(--brand-primary-light);">Sign in to your account</a>
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

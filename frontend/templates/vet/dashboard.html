@@ -1,0 +1,137 @@
+{% extends 'base.html' %}
+
+{% block title %}Veterinary Triage Queue - GoShala Care{% endblock %}
+{% block page_title %}Veterinary Triage & Case Review{% endblock %}
+{% block page_subtitle %}Prioritized queue of bovine health alerts submitted across all registered herds{% endblock %}
+
+{% block content %}
+<!-- Stat Cards -->
+<div class="stats-grid">
+    <div class="stat-card">
+        <div class="stat-icon red">
+            <i class="bi bi-inbox-fill"></i>
+        </div>
+        <div class="stat-details">
+            <div class="stat-value">{{ pending_count }}</div>
+            <div class="stat-label">Pending Review</div>
+        </div>
+    </div>
+
+    <div class="stat-card">
+        <div class="stat-icon amber">
+            <i class="bi bi-exclamation-octagon-fill"></i>
+        </div>
+        <div class="stat-details">
+            <div class="stat-value">{{ high_urgency_count }}</div>
+            <div class="stat-label">Critical High Urgency</div>
+        </div>
+    </div>
+
+    <div class="stat-card">
+        <div class="stat-icon green">
+            <i class="bi bi-check2-all"></i>
+        </div>
+        <div class="stat-details">
+            <div class="stat-value">{{ reviewed_count }}</div>
+            <div class="stat-label">Cases Handled</div>
+        </div>
+    </div>
+
+    <div class="stat-card">
+        <div class="stat-icon teal">
+            <i class="bi bi-people-fill"></i>
+        </div>
+        <div class="stat-details">
+            <div class="stat-value">{{ farmers_served }}</div>
+            <div class="stat-label">Farmers Served</div>
+        </div>
+    </div>
+</div>
+
+<!-- Filters Bar -->
+<div class="card" style="margin-bottom: 24px;">
+    <div class="card-body" style="padding: 16px 24px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
+        <div style="display: flex; gap: 10px; align-items: center;">
+            <span style="font-weight: 600; font-size: 0.88rem; color: var(--text-secondary);">Filter Status:</span>
+            <a href="{{ url_for('vet.dashboard', status='all', urgency=current_urgency) }}" class="btn btn-sm {% if current_status == 'all' %}btn-primary{% else %}btn-outline{% endif %}">All</a>
+            <a href="{{ url_for('vet.dashboard', status='pending', urgency=current_urgency) }}" class="btn btn-sm {% if current_status == 'pending' %}btn-primary{% else %}btn-outline{% endif %}">Pending ({{ pending_count }})</a>
+            <a href="{{ url_for('vet.dashboard', status='in_review', urgency=current_urgency) }}" class="btn btn-sm {% if current_status == 'in_review' %}btn-primary{% else %}btn-outline{% endif %}">In Review</a>
+            <a href="{{ url_for('vet.dashboard', status='resolved', urgency=current_urgency) }}" class="btn btn-sm {% if current_status == 'resolved' %}btn-primary{% else %}btn-outline{% endif %}">Resolved</a>
+        </div>
+
+        <div style="display: flex; gap: 10px; align-items: center;">
+            <span style="font-weight: 600; font-size: 0.88rem; color: var(--text-secondary);">Urgency:</span>
+            <a href="{{ url_for('vet.dashboard', status=current_status, urgency='all') }}" class="btn btn-sm {% if current_urgency == 'all' %}btn-primary{% else %}btn-outline{% endif %}">All</a>
+            <a href="{{ url_for('vet.dashboard', status=current_status, urgency='High') }}" class="btn btn-sm {% if current_urgency == 'High' %}btn-danger{% else %}btn-outline{% endif %}">High Urgency</a>
+            <a href="{{ url_for('vet.dashboard', status=current_status, urgency='Moderate') }}" class="btn btn-sm {% if current_urgency == 'Moderate' %}btn-accent{% else %}btn-outline{% endif %}">Moderate</a>
+        </div>
+    </div>
+</div>
+
+<!-- Priority Triage Queue Table -->
+<div class="card">
+    <div class="card-header">
+        <h3><i class="bi bi-list-stars text-primary"></i> Prioritized Triage Cases (Sorted by Urgency)</h3>
+    </div>
+    <div class="card-body" style="padding: 0;">
+        <div class="table-responsive">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Urgency</th>
+                        <th>Case Number</th>
+                        <th>Cattle & Tag</th>
+                        <th>Farmer & Location</th>
+                        <th>Trigger Source</th>
+                        <th>Suspected Condition</th>
+                        <th>Status</th>
+                        <th>Date Submitted</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if cases %}
+                        {% for c in cases %}
+                            <tr style="{% if c.urgency == 'High' and c.status == 'pending' %}background-color: #fffaf0;{% endif %}">
+                                <td>
+                                    <span class="badge-risk {{ c.urgency }}">{{ c.urgency }}</span>
+                                </td>
+                                <td><strong style="color: var(--brand-primary);">{{ c.case_number }}</strong></td>
+                                <td>
+                                    <strong>{{ c.cow.name }}</strong>
+                                    <span style="display: block; font-size: 0.75rem; color: var(--text-muted);">Tag: {{ c.cow.tag_id }} ({{ c.cow.breed }})</span>
+                                </td>
+                                <td>
+                                    <div>{{ c.farmer.full_name }}</div>
+                                    <span style="font-size: 0.75rem; color: var(--text-muted);"><i class="bi bi-telephone"></i> {{ c.farmer.phone or 'No phone' }}</span>
+                                </td>
+                                <td>
+                                    <span style="text-transform: capitalize; background: var(--bg-subtle); padding: 3px 8px; border-radius: 4px; font-size: 0.8rem;">
+                                        <i class="bi bi-{% if c.source == 'photo' %}camera{% else %}clipboard-pulse{% endif %}"></i> {{ c.source }}
+                                    </span>
+                                </td>
+                                <td><strong style="color: var(--brand-accent);">{{ c.suspected_disease }}</strong></td>
+                                <td>
+                                    <span class="badge-status {{ c.status }}">{{ c.status.replace('_', ' ') }}</span>
+                                </td>
+                                <td>{{ c.created_at.strftime('%b %d, %H:%M') }}</td>
+                                <td>
+                                    <a href="{{ url_for('vet.case_detail', case_id=c.id) }}" class="btn btn-primary btn-sm">
+                                        <i class="bi bi-stethoscope"></i> Review Case
+                                    </a>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr>
+                            <td colspan="9" style="text-align: center; padding: 40px; color: var(--text-muted);">
+                                No cases matching the current filters.
+                            </td>
+                        </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

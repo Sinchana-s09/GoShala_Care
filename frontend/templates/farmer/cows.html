@@ -1,0 +1,173 @@
+{% extends 'base.html' %}
+
+{% block title %}My Cows - GoShala Care{% endblock %}
+{% block page_title %}Herd Cattle Directory{% endblock %}
+{% block page_subtitle %}Manage cattle profiles, identification tags, and access longitudinal clinical histories{% endblock %}
+
+{% block topbar_actions %}
+<button type="button" class="btn btn-primary btn-sm" onclick="document.getElementById('addCowModal').style.display='flex'">
+    <i class="bi bi-plus-circle"></i> Register New Cow
+</button>
+{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <h3><i class="bi bi-tag-fill text-success"></i> Registered Cattle ({{ cows|length }})</h3>
+        <span style="font-size: 0.85rem; color: var(--text-muted);">Active livestock monitored by GoShala Care</span>
+    </div>
+    <div class="card-body" style="padding: 0;">
+        <div class="table-responsive">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Ear Tag ID</th>
+                        <th>Name</th>
+                        <th>Breed</th>
+                        <th>Lactation Stage</th>
+                        <th>Latest Temp</th>
+                        <th>Latest Milk</th>
+                        <th>Risk Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if cows %}
+                        {% for cow in cows %}
+                            {% set latest = cow.latest_vitals %}
+                            <tr>
+                                <td>
+                                    <strong style="color: var(--brand-primary); font-size: 0.95rem;">{{ cow.tag_id }}</strong>
+                                </td>
+                                <td>
+                                    <div style="display: flex; align-items: center; gap: 10px;">
+                                        {% if cow.photo_url %}
+                                            <img src="{{ cow.photo_url }}" alt="{{ cow.name }}" style="width: 36px; height: 36px; border-radius: 50%; object-fit: cover;">
+                                        {% else %}
+                                            <div style="width: 36px; height: 36px; border-radius: 50%; background: var(--bg-subtle); display: flex; align-items: center; justify-content: center; color: var(--brand-primary); font-weight: 600;">
+                                                <i class="bi bi-tag"></i>
+                                            </div>
+                                        {% endif %}
+                                        <strong>{{ cow.name }}</strong>
+                                    </div>
+                                </td>
+                                <td>{{ cow.breed }}</td>
+                                <td>
+                                    <span style="background: var(--bg-subtle); padding: 3px 8px; border-radius: 4px; font-size: 0.8rem; font-weight: 500;">
+                                        {{ cow.lactation_stage }}
+                                    </span>
+                                </td>
+                                <td>
+                                    {% if latest %}
+                                        <span style="{% if latest.temperature > 39.3 or latest.temperature < 38.0 %}color: var(--risk-high); font-weight: 700;{% endif %}">
+                                            {{ latest.temperature }}°C
+                                        </span>
+                                    {% else %}
+                                        <span style="color: var(--text-muted); font-size: 0.8rem;">No log yet</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if latest %}
+                                        <strong>{{ latest.milk_yield }} L</strong>
+                                    {% else %}
+                                        <span style="color: var(--text-muted); font-size: 0.8rem;">--</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if latest %}
+                                        <span class="badge-risk {{ latest.calculated_risk }}">{{ latest.calculated_risk }}</span>
+                                    {% else %}
+                                        <span class="badge-status in_review">New</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <div style="display: flex; gap: 8px;">
+                                        <a href="{{ url_for('farmer.cow_detail', cow_id=cow.id) }}" class="btn btn-outline btn-sm">
+                                            <i class="bi bi-eye"></i> Details
+                                        </a>
+                                        <a href="{{ url_for('farmer.log_vitals') }}?cow_id={{ cow.id }}" class="btn btn-primary btn-sm">
+                                            <i class="bi bi-pencil-square"></i> Log
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr>
+                            <td colspan="8" style="text-align: center; padding: 40px; color: var(--text-muted);">
+                                No cows registered yet. Click "Register New Cow" to add your first animal.
+                            </td>
+                        </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Register New Cow -->
+<div id="addCowModal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center; padding: 20px;">
+    <div class="card" style="width: 100%; max-width: 520px; box-shadow: var(--shadow-lg); margin-bottom: 0;">
+        <div class="card-header">
+            <h3><i class="bi bi-tag-fill text-success"></i> Register New Cow</h3>
+            <button type="button" style="background: none; border: none; font-size: 1.4rem; cursor: pointer;" onclick="document.getElementById('addCowModal').style.display='none'">&times;</button>
+        </div>
+        <div class="card-body">
+            <form method="POST" action="{{ url_for('farmer.cows') }}" enctype="multipart/form-data">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label" for="tag_id">Official Ear Tag ID *</label>
+                        <input type="text" id="tag_id" name="tag_id" class="form-control" placeholder="e.g. IN-GJ-005" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="name">Cow Name</label>
+                        <input type="text" id="name" name="name" class="form-control" placeholder="e.g. Gauri / Ganga">
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label" for="breed">Breed</label>
+                        <select id="breed" name="breed" class="form-control">
+                            <option value="Gir">Gir (Indigenous)</option>
+                            <option value="Sahiwal">Sahiwal (Indigenous)</option>
+                            <option value="Kankrej">Kankrej (Indigenous)</option>
+                            <option value="Rathi">Rathi (Indigenous)</option>
+                            <option value="Red Sindhi">Red Sindhi (Indigenous)</option>
+                            <option value="Crossbred HF">Holstein Friesian Cross</option>
+                            <option value="Jersey Cross">Jersey Cross</option>
+                            <option value="Other">Other / Mixed</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="lactation_stage">Lactation Stage</label>
+                        <select id="lactation_stage" name="lactation_stage" class="form-control">
+                            <option value="Early">Early (1-100 Days)</option>
+                            <option value="Mid" selected>Mid (101-200 Days)</option>
+                            <option value="Late">Late (>200 Days)</option>
+                            <option value="Dry">Dry Cow</option>
+                            <option value="Heifer">Heifer</option>
+                            <option value="Calf">Calf</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="date_of_birth">Approximate Date of Birth</label>
+                    <input type="date" id="date_of_birth" name="date_of_birth" class="form-control">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="cow_photo">Optional Photo Upload</label>
+                    <input type="file" id="cow_photo" name="cow_photo" class="form-control" accept="image/*">
+                </div>
+
+                <div style="display: flex; justify-content: flex-end; gap: 12px; margin-top: 24px;">
+                    <button type="button" class="btn btn-outline" onclick="document.getElementById('addCowModal').style.display='none'">Cancel</button>
+                    <button type="submit" class="btn btn-primary"><i class="bi bi-check-circle"></i> Save Registration</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,232 @@
+{% extends 'base.html' %}
+
+{% block title %}Photo Scan AI - Visual Disease Detection - GoShala Care{% endblock %}
+{% block page_title %}Photo-Based Bovine Lesion & Disease Detection{% endblock %}
+{% block page_subtitle %}Visual diagnosis using computer vision for skin nodules (LSD), udder erythema (Mastitis), and hoof lesions{% endblock %}
+
+{% block content %}
+<div style="display: grid; grid-template-columns: 1.2fr 1fr; gap: 28px; max-width: 1050px; margin: 0 auto;">
+    <!-- Upload Form Card -->
+    <div class="card">
+        <div class="card-header">
+            <h3><i class="bi bi-camera-fill text-success"></i> Upload Cattle Photo</h3>
+        </div>
+        <div class="card-body">
+            {% if not cows %}
+                <div style="background: #fef3c7; border: 1px solid #f59e0b; border-radius: 8px; padding: 16px; margin-bottom: 20px;">
+                    <h4 style="color: #92400e; margin: 0 0 6px 0; font-size: 0.95rem;">
+                        <i class="bi bi-exclamation-triangle-fill"></i> No Cattle Registered in Your Herd Yet
+                    </h4>
+                    <p style="color: #78350f; font-size: 0.85rem; margin: 0 0 12px 0;">
+                        To run an AI visual scan and save diagnostic records, please register a cow in your herd first.
+                    </p>
+                    <a href="{{ url_for('farmer.cows') }}" class="btn btn-primary btn-sm">
+                        <i class="bi bi-plus-circle"></i> + Add Cow to Herd First
+                    </a>
+                </div>
+            {% endif %}
+
+            <form id="photoScanForm" method="POST" action="{{ url_for('farmer.photo_scan') }}" enctype="multipart/form-data">
+                <div class="form-group">
+                    <label class="form-label" for="cow_id">Select Cattle *</label>
+                    <select id="cow_id" name="cow_id" class="form-control" required>
+                        <option value="">-- Choose Cow from Your Herd --</option>
+                        {% for c in cows %}
+                            <option value="{{ c.id }}" {% if request.args.get('cow_id')|int == c.id or (cow and cow.id == c.id) or loop.first %}selected{% endif %}>
+                                {{ c.name }} (Tag: {{ c.tag_id }}) — {{ c.breed }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="form-group" style="margin-top: 18px;">
+                    <label class="form-label">Body Region / Disease Part Analyzed *</label>
+                    <div class="pill-selector">
+                        <input type="radio" id="part_skin" name="body_part" value="skin" checked>
+                        <label for="part_skin"><i class="bi bi-patch-exclamation"></i> Skin / Coat</label>
+
+                        <input type="radio" id="part_udder" name="body_part" value="udder">
+                        <label for="part_udder"><i class="bi bi-shield-shaded"></i> Udder / Teats</label>
+
+                        <input type="radio" id="part_hooves" name="body_part" value="hooves">
+                        <label for="part_hooves"><i class="bi bi-bezier2"></i> Hooves / Limbs</label>
+                    </div>
+                </div>
+
+                <div class="form-group" style="margin-top: 22px;">
+                    <label class="form-label">Select Photo (Clear, Well-Lit Close-up) *</label>
+                    
+                    <!-- Interactive Drag-and-Drop Dropzone -->
+                    <div id="dropzoneArea" style="position: relative; cursor: pointer; border: 2px dashed #059669; border-radius: 12px; padding: 28px 18px; text-align: center; background: #f0fdf4; transition: all 0.25s ease;">
+                        <i class="bi bi-cloud-arrow-up-fill" style="font-size: 42px; color: #16a34a; display: block; margin-bottom: 8px;"></i>
+                        <h4 id="dropzoneHeading" style="font-size: 1rem; color: #166534; margin: 0 0 4px 0; font-weight: 700;">
+                            Click to Browse or Drag & Drop Photo Here
+                        </h4>
+                        <p id="dropzoneHelp" style="font-size: 0.8rem; color: #64748b; margin: 0;">
+                            Supports JPG, JPEG, PNG, WebP & BMP (Up to 16 MB)
+                        </p>
+                        
+                        <div id="dropzoneBadge" style="display: none; margin-top: 10px;">
+                            <span style="background: #dcfce7; color: #166534; padding: 4px 12px; border-radius: 20px; font-size: 0.82rem; font-weight: 700; display: inline-flex; align-items: center; gap: 6px;">
+                                <i class="bi bi-check-circle-fill text-success"></i> <span id="fileNameDisplay">photo.jpg</span>
+                            </span>
+                        </div>
+
+                        <!-- Invisible input kept inside reachable DOM without display:none breaking HTML5 validity -->
+                        <input type="file" id="scanImageInput" name="image" accept="image/*,.jpg,.jpeg,.png,.webp,.bmp" style="position: absolute; width: 1px; height: 1px; opacity: 0.01; left: 0; bottom: 0;">
+                    </div>
+
+                    <div id="imagePreviewContainer" style="text-align: center; margin-top: 12px;"></div>
+                </div>
+
+                <button type="submit" class="btn btn-accent" style="width: 100%; justify-content: center; padding: 13px; margin-top: 18px; font-size: 1rem; font-weight: 700;">
+                    <i class="bi bi-magic"></i> Run AI Visual Analysis
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Scan Results Card -->
+    <div class="card">
+        <div class="card-header">
+            <h3><i class="bi bi-clipboard2-check text-primary"></i> Scan Diagnostic Report</h3>
+        </div>
+        <div class="card-body">
+            {% if scan_result %}
+                <div style="text-align: center; margin-bottom: 20px;">
+                    <img src="{{ last_scan.image_path }}" alt="Analyzed Cattle Photo" style="max-height: 200px; border-radius: var(--radius-sm); border: 2px solid var(--border-color); box-shadow: var(--shadow-sm); object-fit: cover;">
+                </div>
+
+                <div style="background: var(--bg-subtle); padding: 16px; border-radius: var(--radius-sm); margin-bottom: 18px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                        <span style="font-size: 0.85rem; color: var(--text-muted); text-transform: uppercase; font-weight: 600;">Classified Condition</span>
+                        <span class="badge-risk {{ scan_result.detected_risk }}">{{ scan_result.detected_risk }} Risk</span>
+                    </div>
+                    <h3 style="font-size: 1.25rem; color: var(--brand-primary-dark); margin-bottom: 6px;">
+                        {{ scan_result.display_label }}
+                    </h3>
+                    <div style="display: flex; align-items: center; gap: 8px; margin-top: 10px;">
+                        <span style="font-size: 0.85rem; font-weight: 600;">Model Confidence:</span>
+                        <div style="flex-grow: 1; height: 10px; background: #e5dfd5; border-radius: 5px; overflow: hidden;">
+                            <div style="width: {{ scan_result.confidence * 100 }}%; height: 100%; background: {% if scan_result.detected_risk == 'High' %}#dc2626{% elif scan_result.detected_risk == 'Moderate' %}#d97706{% else %}#059669{% endif %}; border-radius: 5px;"></div>
+                        </div>
+                        <span style="font-size: 0.85rem; font-weight: 700;">{{ (scan_result.confidence * 100)|round(1) }}%</span>
+                    </div>
+                </div>
+
+                <div class="explain-box" style="margin-top: 0;">
+                    <h4><i class="bi bi-info-circle-fill"></i> Veterinary Protocol & Recommendations</h4>
+                    <p style="font-size: 0.88rem; color: var(--text-secondary); line-height: 1.5;">
+                        {{ scan_result.notes }}
+                    </p>
+                    {% if scan_result.detected_risk in ['Moderate', 'High'] %}
+                        <div style="margin-top: 12px; padding: 12px; background: #fee2e2; border-radius: 6px; color: #991b1b; font-size: 0.86rem; font-weight: 600;">
+                            <i class="bi bi-hospital-fill"></i> Urgent triage case created and dispatched to the Veterinary Queue. An accredited veterinarian will inspect this case.
+                        </div>
+                    {% else %}
+                        <div style="margin-top: 12px; padding: 10px; background: #dcfce7; border-radius: 6px; color: #166534; font-size: 0.84rem; font-weight: 600;">
+                            <i class="bi bi-check-circle-fill"></i> Lesion scan normal. Continue standard herd hygiene and nutrition.
+                        </div>
+                    {% endif %}
+                </div>
+            {% else %}
+                <div style="text-align: center; padding: 48px 16px; color: var(--text-muted);">
+                    <i class="bi bi-image" style="font-size: 54px; color: #cbd5e1; display: block; margin-bottom: 12px;"></i>
+                    <h4 style="color: var(--brand-primary); margin-bottom: 6px;">No Active Scan</h4>
+                    <p style="font-size: 0.88rem; line-height: 1.5;">
+                        Upload a photo of your cattle's <strong>skin/coat</strong> (for Lumpy Skin nodules), <strong>udder</strong> (for Mastitis swelling), or <strong>hooves</strong> (for foot rot) to receive immediate AI clinical evaluation.
+                    </p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const dropzone = document.getElementById('dropzoneArea');
+    const fileInput = document.getElementById('scanImageInput');
+    const heading = document.getElementById('dropzoneHeading');
+    const badge = document.getElementById('dropzoneBadge');
+    const fileNameDisplay = document.getElementById('fileNameDisplay');
+    const preview = document.getElementById('imagePreviewContainer');
+    const form = document.getElementById('photoScanForm');
+
+    if (!dropzone || !fileInput) return;
+
+    // Click dropzone triggers file picker
+    dropzone.addEventListener('click', (e) => {
+        if (e.target !== fileInput) {
+            fileInput.click();
+        }
+    });
+
+    // Drag-and-drop visuals
+    ['dragenter', 'dragover'].forEach(eventName => {
+        dropzone.addEventListener(eventName, (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            dropzone.style.background = '#dcfce7';
+            dropzone.style.borderColor = '#15803d';
+            dropzone.style.transform = 'scale(1.01)';
+        });
+    });
+
+    ['dragleave', 'drop'].forEach(eventName => {
+        dropzone.addEventListener(eventName, (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            dropzone.style.background = '#f0fdf4';
+            dropzone.style.borderColor = '#059669';
+            dropzone.style.transform = 'scale(1)';
+        });
+    });
+
+    dropzone.addEventListener('drop', (e) => {
+        const dt = e.dataTransfer;
+        if (dt && dt.files && dt.files.length > 0) {
+            fileInput.files = dt.files;
+            handleFile(dt.files[0]);
+        }
+    });
+
+    fileInput.addEventListener('change', () => {
+        if (fileInput.files && fileInput.files[0]) {
+            handleFile(fileInput.files[0]);
+        }
+    });
+
+    function handleFile(file) {
+        if (!file) return;
+        heading.textContent = 'Selected: ' + file.name;
+        fileNameDisplay.textContent = file.name + ' (' + (file.size / 1024).toFixed(0) + ' KB)';
+        badge.style.display = 'block';
+
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            preview.innerHTML = `
+                <div style="display: inline-block; padding: 6px; background: white; border-radius: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); border: 2px solid #16a34a; margin-top: 8px;">
+                    <img src="${e.target.result}" style="max-height: 200px; max-width: 100%; border-radius: 6px; display: block; object-fit: contain;">
+                    <div style="font-size: 0.8rem; color: #166534; font-weight: 700; margin-top: 6px;">
+                        <i class="bi bi-check-circle-fill text-success"></i> Photo attached & ready for analysis
+                    </div>
+                </div>
+            `;
+        };
+        reader.readAsDataURL(file);
+    }
+
+    if (form) {
+        form.addEventListener('submit', (e) => {
+            if (!fileInput.files || fileInput.files.length === 0) {
+                e.preventDefault();
+                alert('Please click the green box to select or drop an image file of the cattle first.');
+                return false;
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

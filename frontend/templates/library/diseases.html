@@ -1,0 +1,99 @@
+{% extends 'base.html' %}
+
+{% block title %}Cattle Disease Reference Library - GoShala Care{% endblock %}
+{% block page_title %}Cattle Disease & Clinical Reference Library{% endblock %}
+{% block page_subtitle %}Comprehensive compendium of bovine pathologies, diagnostic indicators, and biosecurity prevention protocols{% endblock %}
+
+{% block content %}
+<!-- Search & Filter Controls -->
+<div class="card" style="margin-bottom: 24px;">
+    <div class="card-body" style="padding: 16px 24px;">
+        <form method="GET" action="{{ url_for('library.diseases_library') }}" style="display: flex; gap: 14px; align-items: center; flex-wrap: wrap;">
+            <div style="flex-grow: 1; min-width: 240px;">
+                <input type="text" name="q" class="form-control" placeholder="Search disease name, symptoms, or indicators..." value="{{ search }}">
+            </div>
+            <div>
+                <select name="urgency" class="form-control" onchange="this.form.submit()">
+                    <option value="all" {% if urgency_filter == 'all' %}selected{% endif %}>All Urgency Levels</option>
+                    <option value="High" {% if urgency_filter == 'High' %}selected{% endif %}>High Urgency (Critical)</option>
+                    <option value="Moderate" {% if urgency_filter == 'Moderate' %}selected{% endif %}>Moderate Urgency</option>
+                    <option value="Low" {% if urgency_filter == 'Low' %}selected{% endif %}>Low Urgency</option>
+                </select>
+            </div>
+            <button type="submit" class="btn btn-primary btn-sm">
+                <i class="bi bi-search"></i> Search
+            </button>
+            {% if search or urgency_filter != 'all' %}
+                <a href="{{ url_for('library.diseases_library') }}" class="btn btn-outline btn-sm">Clear</a>
+            {% endif %}
+        </form>
+    </div>
+</div>
+
+<!-- Disease Cards Grid -->
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); gap: 24px;">
+    {% for d in diseases %}
+        <div class="card" style="margin-bottom: 0; display: flex; flex-direction: column;">
+            <div class="card-header" style="display: flex; justify-content: space-between; align-items: flex-start; padding: 18px 22px;">
+                <div>
+                    <h3 style="font-size: 1.25rem; color: var(--brand-primary); margin-bottom: 2px;">{{ d.name }}</h3>
+                    <span style="font-style: italic; font-size: 0.82rem; color: var(--text-muted);">{{ d.scientific_name or 'Bovine Pathology' }}</span>
+                </div>
+                <span class="badge-risk {{ d.urgency_level }}">{{ d.urgency_level }} Urgency</span>
+            </div>
+
+            <div class="card-body" style="padding: 20px 22px; flex-grow: 1; display: flex; flex-direction: column; gap: 14px;">
+                <div>
+                    <span style="font-size: 0.75rem; text-transform: uppercase; color: var(--text-muted); font-weight: 700;">Pathophysiology</span>
+                    <p style="font-size: 0.88rem; color: var(--text-primary); margin-top: 2px; line-height: 1.5;">
+                        {{ d.description }}
+                    </p>
+                </div>
+
+                {% if d.key_indicators %}
+                    <div style="background: #fff8f0; border: 1px solid #fed7aa; padding: 10px 12px; border-radius: 6px;">
+                        <strong style="color: #9a3412; font-size: 0.82rem; display: block;">
+                            <i class="bi bi-exclamation-circle-fill"></i> Key Clinical Indicators:
+                        </strong>
+                        <span style="font-size: 0.84rem; color: #7c2d12;">{{ d.key_indicators }}</span>
+                    </div>
+                {% endif %}
+
+                <div>
+                    <span style="font-size: 0.75rem; text-transform: uppercase; color: var(--text-muted); font-weight: 700;">Associated Symptoms (Rule Classifier Triggers)</span>
+                    <div style="display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px;">
+                        {% for ds in d.symptoms %}
+                            <span style="background: var(--bg-subtle); color: var(--brand-primary); padding: 3px 8px; border-radius: 4px; font-size: 0.78rem; font-weight: 600; border: 1px solid var(--border-color);">
+                                {{ symptoms.get(ds.symptom_code, ds.symptom_code.replace('_', ' ')) }}
+                            </span>
+                        {% else %}
+                            <span style="font-size: 0.8rem; color: var(--text-muted);">No symptoms linked</span>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <div style="background: var(--bg-subtle); padding: 12px; border-radius: 6px; border-left: 3px solid var(--brand-primary); margin-top: auto;">
+                    <strong style="color: var(--brand-primary); font-size: 0.82rem; display: block;">
+                        <i class="bi bi-shield-check"></i> Prevention & Management:
+                    </strong>
+                    <p style="font-size: 0.84rem; color: var(--text-secondary); margin-top: 3px; line-height: 1.4;">
+                        {{ d.prevention_guidance }}
+                    </p>
+                    {% if d.first_aid %}
+                        <div style="margin-top: 6px; pt-2; border-top: 1px dashed var(--border-color); padding-top: 6px;">
+                            <strong style="color: var(--brand-accent); font-size: 0.8rem;">Emergency First-Aid:</strong>
+                            <span style="font-size: 0.82rem; color: var(--text-primary); display: block;">{{ d.first_aid }}</span>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    {% else %}
+        <div style="grid-column: 1 / -1; text-align: center; padding: 40px; background: white; border-radius: 8px;">
+            <i class="bi bi-search" style="font-size: 36px; color: var(--text-muted); display: block; margin-bottom: 8px;"></i>
+            <h4>No diseases match your search criteria.</h4>
+            <p style="font-size: 0.85rem; color: var(--text-muted);">Try searching for terms like "mastitis", "blister", "fever", or "bloat".</p>
+        </div>
+    {% endfor %}
+</div>
+{% endblock %}

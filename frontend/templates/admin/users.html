@@ -1,0 +1,137 @@
+{% extends 'base.html' %}
+
+{% block title %}Manage Users - GoShala Care{% endblock %}
+{% block page_title %}User & Role Administration{% endblock %}
+{% block page_subtitle %}Provision accredited veterinarian accounts, manage administrators, and monitor platform access{% endblock %}
+
+{% block topbar_actions %}
+<button type="button" class="btn btn-primary btn-sm" onclick="document.getElementById('createUserModal').style.display='flex'">
+    <i class="bi bi-person-plus-fill"></i> Create New Vet / Admin
+</button>
+{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <h3><i class="bi bi-people-fill text-primary"></i> All Platform Accounts ({{ users|length }})</h3>
+    </div>
+    <div class="card-body" style="padding: 0;">
+        <div class="table-responsive">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Full Name</th>
+                        <th>Username / Email</th>
+                        <th>Role</th>
+                        <th>Phone / Location</th>
+                        <th>Account Status</th>
+                        <th>Member Since</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for u in users %}
+                        <tr>
+                            <td>#{{ u.id }}</td>
+                            <td><strong>{{ u.full_name }}</strong></td>
+                            <td>
+                                <div>{{ u.username }}</div>
+                                <span style="font-size: 0.75rem; color: var(--text-muted);">{{ u.email }}</span>
+                            </td>
+                            <td>
+                                <span class="badge-status {% if u.role == 'admin' %}pending{% elif u.role == 'vet' %}in_review{% else %}resolved{% endif %}" style="font-weight: 700;">
+                                    {{ u.role.upper() }}
+                                </span>
+                            </td>
+                            <td>
+                                <div style="font-size: 0.85rem;">{{ u.phone or 'N/A' }}</div>
+                                <span style="font-size: 0.75rem; color: var(--text-muted);">{{ u.location or 'Not specified' }}</span>
+                            </td>
+                            <td>
+                                {% if u.is_active %}
+                                    <span style="color: #059669; font-weight: 600; font-size: 0.82rem;"><i class="bi bi-check-circle-fill"></i> Active</span>
+                                {% else %}
+                                    <span style="color: #dc2626; font-weight: 600; font-size: 0.82rem;"><i class="bi bi-x-circle-fill"></i> Deactivated</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ u.created_at.strftime('%b %d, %Y') }}</td>
+                            <td>
+                                {% if u.id != current_user.id %}
+                                    <form method="POST" action="{{ url_for('admin.toggle_user', user_id=u.id) }}" style="display: inline;">
+                                        <button type="submit" class="btn btn-sm {% if u.is_active %}btn-outline{% else %}btn-primary{% endif %}" onclick="return confirm('Toggle active status for {{ u.username }}?')">
+                                            {% if u.is_active %}Deactivate{% else %}Activate{% endif %}
+                                        </button>
+                                    </form>
+                                {% else %}
+                                    <span style="font-size: 0.75rem; color: var(--text-muted);">(Current Session)</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Create Vet / User -->
+<div id="createUserModal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center; padding: 20px;">
+    <div class="card" style="width: 100%; max-width: 540px; box-shadow: var(--shadow-lg); margin-bottom: 0;">
+        <div class="card-header">
+            <h3><i class="bi bi-person-plus text-success"></i> Provision Authorized Account</h3>
+            <button type="button" style="background: none; border: none; font-size: 1.4rem; cursor: pointer;" onclick="document.getElementById('createUserModal').style.display='none'">&times;</button>
+        </div>
+        <div class="card-body">
+            <form method="POST" action="{{ url_for('admin.users') }}">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label" for="full_name">Full Name *</label>
+                        <input type="text" id="full_name" name="full_name" class="form-control" placeholder="e.g. Dr. Sunita Sharma, Ph.D" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="username">Username *</label>
+                        <input type="text" id="username" name="username" class="form-control" placeholder="e.g. dr_sunita" required>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label" for="email">Email Address *</label>
+                        <input type="email" id="email" name="email" class="form-control" placeholder="dr.sunita@vet.org" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="role">Assigned Role *</label>
+                        <select id="role" name="role" class="form-control" required>
+                            <option value="vet" selected>Veterinarian (Review Queue Access)</option>
+                            <option value="admin">Administrator (Full Access)</option>
+                            <option value="farmer">Farmer</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label" for="phone">Phone / Emergency Contact</label>
+                        <input type="text" id="phone" name="phone" class="form-control" placeholder="+91 98765 00000">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="location">Clinic Location / Hospital</label>
+                        <input type="text" id="location" name="location" class="form-control" placeholder="e.g. Anand Bovine Center">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="password">Initial Password *</label>
+                    <input type="password" id="password" name="password" class="form-control" placeholder="Minimum 6 characters" required>
+                </div>
+
+                <div style="display: flex; justify-content: flex-end; gap: 12px; margin-top: 24px;">
+                    <button type="button" class="btn btn-outline" onclick="document.getElementById('createUserModal').style.display='none'">Cancel</button>
+                    <button type="submit" class="btn btn-primary"><i class="bi bi-check-circle"></i> Provision Account</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

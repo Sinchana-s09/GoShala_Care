@@ -1,0 +1,83 @@
+{% extends 'base.html' %}
+
+{% block title %}Risk Alerts & Case History - GoShala Care{% endblock %}
+{% block page_title %}Herd Risk Alerts & Veterinary Triage{% endblock %}
+{% block page_subtitle %}Longitudinal record of clinical warnings, ML detections, and direct advice from veterinarians{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <h3><i class="bi bi-bell-fill text-warning"></i> Flagged Alerts ({{ cases|length }})</h3>
+        <span style="font-size: 0.82rem; color: var(--text-muted);">Cases flagged by rule thresholds or machine learning</span>
+    </div>
+    <div class="card-body" style="padding: 0;">
+        <div class="table-responsive">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Case #</th>
+                        <th>Date</th>
+                        <th>Cattle (Tag)</th>
+                        <th>Trigger Source</th>
+                        <th>Suspected Condition</th>
+                        <th>Urgency</th>
+                        <th>Triage Status</th>
+                        <th>Clinical Details & Vet Guidance</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if cases %}
+                        {% for c in cases %}
+                            <tr>
+                                <td><strong style="color: var(--brand-primary);">{{ c.case_number }}</strong></td>
+                                <td>{{ c.created_at.strftime('%b %d, %Y') }}</td>
+                                <td>
+                                    <a href="{{ url_for('farmer.cow_detail', cow_id=c.cow.id) }}" style="font-weight: 600;">
+                                        {{ c.cow.name }}
+                                    </a>
+                                    <span style="display: block; font-size: 0.75rem; color: var(--text-muted);">{{ c.cow.tag_id }}</span>
+                                </td>
+                                <td>
+                                    <span style="text-transform: capitalize; background: var(--bg-subtle); padding: 3px 8px; border-radius: 4px; font-size: 0.8rem;">
+                                        <i class="bi bi-{% if c.source == 'photo' %}camera{% else %}clipboard-pulse{% endif %}"></i> {{ c.source }}
+                                    </span>
+                                </td>
+                                <td><strong>{{ c.suspected_disease }}</strong></td>
+                                <td><span class="badge-risk {{ c.urgency }}">{{ c.urgency }}</span></td>
+                                <td><span class="badge-status {{ c.status }}">{{ c.status.replace('_', ' ') }}</span></td>
+                                <td style="max-width: 380px; font-size: 0.84rem;">
+                                    {% if c.vet_notes %}
+                                        <div style="background: #ecfdf5; border-left: 3px solid #10b981; padding: 8px 10px; border-radius: 4px; margin-bottom: 6px;">
+                                            <strong style="color: #065f46;"><i class="bi bi-check-circle-fill"></i> Veterinarian Advice:</strong>
+                                            <p style="color: #1f2937; margin-top: 2px;">{{ c.vet_notes }}</p>
+                                            {% if c.vet_recommendation %}
+                                                <div style="margin-top: 4px; color: #b45309; font-weight: 600;">
+                                                    Prescription / Action: {{ c.vet_recommendation }}
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                    {% else %}
+                                        <div style="background: #fffbeb; border-left: 3px solid #f59e0b; padding: 6px 10px; border-radius: 4px; color: #92400e; margin-bottom: 6px;">
+                                            <i class="bi bi-clock-history"></i> Pending veterinary evaluation in triage queue.
+                                        </div>
+                                    {% endif %}
+                                    
+                                    <span style="font-size: 0.76rem; color: var(--text-muted); display: block;">
+                                        {{ c.rule_explanation }}
+                                    </span>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr>
+                            <td colspan="8" style="text-align: center; padding: 40px; color: var(--text-muted);">
+                                No alerts or flagged cases found for your herd.
+                            </td>
+                        </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,58 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+*.whl
+
+# Virtual environments
+venv/
+env/
+.venv/
+ENV/
+
+# Environment variables
+.env
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+
+# Uploads (user-generated content)
+uploads/
+
+# Large archive/dataset files
+*.zip
+data/
+
+# ML model files (large binaries)
+*.h5
+*.pkl
+*.joblib
+*.pt
+*.pth
+*.bin
+*.onnx
+
+# IDE / OS
+.vscode/
+.idea/
+*.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Flask / Werkzeug
+instance/
+.webassets-cache
+
+# Jupyter
+.ipynb_checkpoints/

@@ -1,0 +1,392 @@
+{% extends 'base.html' %}
+
+{% block title %}Veterinary Contacts & Emergency First Aid - GoShala Care{% endblock %}
+{% block page_title %}Veterinary Contacts & Emergency Dispatch{% endblock %}
+{% block page_subtitle %}Directory of accredited cattle doctors, 24/7 livestock emergency dispatch numbers, and immediate bovine first-aid guidance{% endblock %}
+
+{% block head_extra %}
+<style>
+    .vet-card {
+        background: var(--bg-surface);
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius-md);
+        padding: 22px;
+        box-shadow: var(--shadow-sm);
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+    }
+    .vet-card:hover {
+        transform: translateY(-3px);
+        box-shadow: var(--shadow-md);
+        border-color: #1b4332;
+    }
+    .vet-card.emergency-border {
+        border-left: 5px solid #dc2626;
+    }
+    .emergency-badge {
+        font-size: 0.72rem;
+        background: #fee2e2;
+        color: #dc2626;
+        padding: 3px 8px;
+        border-radius: 6px;
+        font-weight: 700;
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        letter-spacing: 0.5px;
+    }
+    .call-btn {
+        background: #1b4332;
+        color: white;
+        text-decoration: none;
+        padding: 10px 14px;
+        border-radius: 8px;
+        font-weight: 600;
+        font-size: 0.9rem;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        transition: background 0.2s ease;
+    }
+    .call-btn:hover {
+        background: #2d6a4f;
+        color: white;
+    }
+    .whatsapp-btn {
+        background: #25d366;
+        color: white;
+        text-decoration: none;
+        padding: 10px 14px;
+        border-radius: 8px;
+        font-weight: 600;
+        font-size: 0.9rem;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        transition: background 0.2s ease;
+    }
+    .whatsapp-btn:hover {
+        background: #1ebd5b;
+        color: white;
+    }
+    /* Modal styles */
+    .modal-overlay {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0,0,0,0.55);
+        z-index: 9999;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+    }
+    .modal-content-box {
+        background: white;
+        max-width: 560px;
+        width: 100%;
+        max-height: 90vh;
+        overflow-y: auto;
+        border-radius: var(--radius-md);
+        box-shadow: var(--shadow-lg);
+        padding: 26px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Top Search & Quick Action Controls -->
+<div class="card" style="margin-bottom: 24px;">
+    <div class="card-body" style="padding: 18px 22px;">
+        <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 16px;">
+            <!-- Live Search Bar -->
+            <div style="flex: 1; min-width: 280px; position: relative;">
+                <i class="bi bi-search" style="position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--text-muted); font-size: 1rem;"></i>
+                <input type="text" id="vetSearchInput" class="form-control" placeholder="Search doctor, clinic name, address, or specialty..." style="padding-left: 38px; font-size: 0.95rem;">
+            </div>
+
+            <!-- Quick Filter & Add Buttons -->
+            <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 10px;">
+                <select id="emergencyFilter" class="form-control" style="width: auto; padding: 8px 14px; font-size: 0.9rem;">
+                    <option value="all">All Clinics ({{ vets|length }})</option>
+                    <option value="emergency">24/7 Emergency Only</option>
+                </select>
+
+                <button type="button" class="btn btn-primary btn-sm" onclick="openAddVetModal()" style="padding: 8px 16px;">
+                    <i class="bi bi-person-plus-fill"></i> + Add Vet Contact
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Directory Cards Grid -->
+<div class="card" style="margin-bottom: 30px;">
+    <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;">
+        <h3>
+            <i class="bi bi-telephone-inbound-fill text-success"></i> 
+            Veterinary Directory (<span id="visibleCount">{{ vets|length }}</span> Doctors Available)
+        </h3>
+        <span style="font-size: 0.84rem; color: var(--text-muted);">
+            Click <strong>Call Now</strong> to instantly dial on mobile or computer
+        </span>
+    </div>
+    <div class="card-body">
+        <div id="vetsGrid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px;">
+            {% for v in vets %}
+                <div class="vet-card {% if v.emergency_available %}emergency-border{% endif %}" 
+                     data-name="{{ v.name | lower }}" 
+                     data-clinic="{{ v.clinic_name | lower }}" 
+                     data-specialty="{{ v.specialty | lower }}" 
+                     data-address="{{ v.address | lower }}" 
+                     data-emergency="{{ 'true' if v.emergency_available else 'false' }}">
+                    
+                    <div>
+                        <!-- Header with Doctor Name & Emergency Badge -->
+                        <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; margin-bottom: 6px;">
+                            <h4 style="font-size: 1.15rem; color: var(--brand-primary); margin: 0; display: flex; align-items: center; gap: 6px;">
+                                <i class="bi bi-patch-check-fill text-primary" style="font-size: 1.05rem;" title="Verified Cattle Doctor"></i>
+                                {{ v.name }}
+                            </h4>
+                            {% if v.emergency_available %}
+                                <span class="emergency-badge">
+                                    <i class="bi bi-lightning-fill"></i> 24/7 EMERGENCY
+                                </span>
+                            {% endif %}
+                        </div>
+
+                        <!-- Clinic & Specialty -->
+                        <strong style="display: block; font-size: 0.95rem; color: #166534; margin-top: 2px;">
+                            <i class="bi bi-hospital"></i> {{ v.clinic_name }}
+                        </strong>
+                        <span style="display: inline-block; background: #e0f2fe; color: #0369a1; font-size: 0.78rem; font-weight: 600; padding: 2px 8px; border-radius: 4px; margin-top: 6px;">
+                            {{ v.specialty }}
+                        </span>
+                        
+                        <!-- Contact Details -->
+                        <div style="margin-top: 14px; font-size: 0.88rem; color: var(--text-secondary); line-height: 1.6;">
+                            <div style="display: flex; align-items: flex-start; gap: 8px;">
+                                <i class="bi bi-geo-alt-fill text-danger" style="margin-top: 2px;"></i> 
+                                <span>{{ v.address }}</span>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 8px; margin-top: 4px;">
+                                <i class="bi bi-clock-fill text-muted"></i> 
+                                <span>{{ v.operating_hours or '8:00 AM - 8:00 PM' }}</span>
+                            </div>
+                            {% if v.email %}
+                                <div style="display: flex; align-items: center; gap: 8px; margin-top: 4px;">
+                                    <i class="bi bi-envelope-fill text-muted"></i> 
+                                    <span>{{ v.email }}</span>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div style="margin-top: 20px; border-top: 1px solid var(--border-color); padding-top: 14px; display: flex; gap: 10px;">
+                        <a href="tel:{{ v.phone }}" class="call-btn" style="flex: 1.2;">
+                            <i class="bi bi-telephone-fill"></i> Call {{ v.phone }}
+                        </a>
+                        {% set clean_phone = v.phone | replace(' ', '') | replace('-', '') | replace('+', '') %}
+                        <a href="https://wa.me/{{ clean_phone }}" target="_blank" class="whatsapp-btn" style="flex: 0.8;" title="Send WhatsApp Message">
+                            <i class="bi bi-whatsapp"></i> Chat
+                        </a>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+
+        <div id="noResultsNotice" style="display: none; text-align: center; padding: 40px 20px; color: var(--text-muted);">
+            <i class="bi bi-search" style="font-size: 40px; color: #cbd5e1; display: block; margin-bottom: 12px;"></i>
+            <h4>No veterinarians match your search</h4>
+            <p style="font-size: 0.9rem;">Try searching by a different name, city, or reset the search filter.</p>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Add New Vet Contact -->
+<div id="addVetModal" class="modal-overlay">
+    <div class="modal-content-box">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; border-bottom: 1px solid var(--border-color); padding-bottom: 10px;">
+            <h3 style="margin: 0; font-size: 1.2rem; color: var(--brand-primary);">
+                <i class="bi bi-person-plus-fill text-success"></i> Add Veterinarian Contact
+            </h3>
+            <button type="button" onclick="closeAddVetModal()" style="background: none; border: none; font-size: 1.5rem; cursor: pointer; color: var(--text-muted);">&times;</button>
+        </div>
+
+        <form method="POST" action="{{ url_for('farmer.add_vet') }}">
+            <div class="form-group" style="margin-bottom: 14px;">
+                <label class="form-label" for="vet_name">Doctor Name *</label>
+                <input type="text" id="vet_name" name="name" class="form-control" placeholder="e.g. Dr. Rajesh Patel, MVSc" required>
+            </div>
+
+            <div class="form-group" style="margin-bottom: 14px;">
+                <label class="form-label" for="clinic_name">Clinic / Hospital Name *</label>
+                <input type="text" id="clinic_name" name="clinic_name" class="form-control" placeholder="e.g. Sanjeevani Cattle Clinic" required>
+            </div>
+
+            <div class="form-group" style="margin-bottom: 14px;">
+                <label class="form-label" for="specialty">Specialty *</label>
+                <select id="specialty" name="specialty" class="form-control">
+                    <option value="Bovine Medicine & Surgery">Bovine Medicine & Surgery</option>
+                    <option value="24/7 Livestock Emergency Care">24/7 Livestock Emergency Care</option>
+                    <option value="Cattle Reproduction & Obstetrics">Cattle Reproduction & Obstetrics</option>
+                    <option value="Mobile Field Vet / Ambulatory Unit">Mobile Field Vet / Ambulatory Unit</option>
+                    <option value="Dairy Herd Health & Nutrition">Dairy Herd Health & Nutrition</option>
+                </select>
+            </div>
+
+            <div class="form-row" style="margin-bottom: 14px;">
+                <div class="form-group">
+                    <label class="form-label" for="phone">Phone / Emergency Number *</label>
+                    <input type="tel" id="phone" name="phone" class="form-control" placeholder="+91 98765 43210" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="email">Email Address</label>
+                    <input type="email" id="email" name="email" class="form-control" placeholder="doctor@clinic.org">
+                </div>
+            </div>
+
+            <div class="form-group" style="margin-bottom: 14px;">
+                <label class="form-label" for="address">Full Address / City *</label>
+                <input type="text" id="address" name="address" class="form-control" placeholder="e.g. Anand-Kheda Highway Circle, Anand, Gujarat" required>
+            </div>
+
+            <div class="form-group" style="margin-bottom: 14px;">
+                <label class="form-label" for="operating_hours">Operating Hours</label>
+                <input type="text" id="operating_hours" name="operating_hours" class="form-control" value="8:00 AM - 8:00 PM" placeholder="e.g. 24 Hours or 8:00 AM - 8:00 PM">
+            </div>
+
+            <div class="form-group" style="margin-bottom: 20px;">
+                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                    <input type="checkbox" name="emergency_available" value="1" checked>
+                    <span style="font-size: 0.9rem; font-weight: 700; color: #dc2626;">
+                        <i class="bi bi-lightning-fill"></i> Available for 24/7 Emergency Calls
+                    </span>
+                </label>
+            </div>
+
+            <div style="display: flex; justify-content: flex-end; gap: 10px;">
+                <button type="button" class="btn btn-outline" onclick="closeAddVetModal()">Cancel</button>
+                <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-check-circle-fill"></i> Save to Contacts
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Emergency First-Aid Guidance Accordion -->
+<div class="card">
+    <div class="card-header" style="background: linear-gradient(90deg, #1b4332 0%, #2d6a4f 100%); color: white;">
+        <h3 style="color: white;"><i class="bi bi-life-preserver text-warning"></i> Emergency Bovine First-Aid Protocols</h3>
+        <span style="font-size: 0.82rem; color: #d1fae5;">Critical actions to stabilize cattle while waiting for doctor arrival</span>
+    </div>
+    <div class="card-body">
+        <div style="display: flex; flex-direction: column; gap: 16px;">
+            <!-- 1. Bloat -->
+            <details style="background: var(--bg-subtle); padding: 16px; border-radius: var(--radius-sm); border-left: 4px solid #dc2626;" open>
+                <summary style="font-weight: 700; font-size: 1rem; color: #991b1b; cursor: pointer;">
+                    <i class="bi bi-exclamation-octagon-fill"></i> Acute Bloat (Severe Left Flank Distension & Asphyxia)
+                </summary>
+                <div style="margin-top: 10px; font-size: 0.9rem; color: var(--text-primary); line-height: 1.5;">
+                    <ul style="padding-left: 20px;">
+                        <li><strong>Keep head elevated:</strong> Prop up cow's front quarters with straw to ease pressure on the diaphragm and prevent suffocation.</li>
+                        <li><strong>Place a wooden gag in mouth:</strong> Secure a 2-inch wooden stick across the mouth (like a horse bit) to stimulate chewing, salivation, and belching.</li>
+                        <li><strong>Administer anti-frothing oil:</strong> Drench 300–500 ml of vegetable oil (mustard, peanut, or linseed oil) or liquid paraffin.</li>
+                    </ul>
+                </div>
+            </details>
+
+            <!-- 2. Downer Cow / Milk Fever -->
+            <details style="background: var(--bg-subtle); padding: 16px; border-radius: var(--radius-sm); border-left: 4px solid #d97706;">
+                <summary style="font-weight: 700; font-size: 1rem; color: #92400e; cursor: pointer;">
+                    <i class="bi bi-battery-charging"></i> Downer Cow / Post-Calving Milk Fever (Hypocalcemia)
+                </summary>
+                <div style="margin-top: 10px; font-size: 0.9rem; color: var(--text-primary); line-height: 1.5;">
+                    <ul style="padding-left: 20px;">
+                        <li><strong>Prop cow into sternal position:</strong> Use straw bales to keep cow resting on chest, NOT flat on side (prevents fatal bloat).</li>
+                        <li><strong>DO NOT force-feed oral liquids:</strong> Swallowing reflex is paralyzed; liquids cause fatal pulmonary aspiration.</li>
+                        <li><strong>Warm extremities:</strong> Wrap cold ears and legs with dry gunny sacks. Requires IV Calcium Borogluconate from veterinarian.</li>
+                    </ul>
+                </div>
+            </details>
+
+            <!-- 3. Foot and Mouth Disease -->
+            <details style="background: var(--bg-subtle); padding: 16px; border-radius: var(--radius-sm); border-left: 4px solid #2d6a4f;">
+                <summary style="font-weight: 700; font-size: 1rem; color: #1b4332; cursor: pointer;">
+                    <i class="bi bi-bandaid-fill"></i> Foot & Mouth Sores (Blisters & Salivation)
+                </summary>
+                <div style="margin-top: 10px; font-size: 0.9rem; color: var(--text-primary); line-height: 1.5;">
+                    <ul style="padding-left: 20px;">
+                        <li><strong>Isolate immediately:</strong> Separate cow to shaded dry pen. Highly contagious.</li>
+                        <li><strong>Mouth wash:</strong> Gently wash mouth with 1% Potassium Permanganate or 2% alum water twice daily.</li>
+                        <li><strong>Hoof hygiene:</strong> Apply antiseptic zinc oxide paste to clefts to prevent secondary fly maggot strikes.</li>
+                    </ul>
+                </div>
+            </details>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const searchInput = document.getElementById('vetSearchInput');
+    const emergencyFilter = document.getElementById('emergencyFilter');
+    const cards = document.querySelectorAll('.vet-card');
+    const countDisplay = document.getElementById('visibleCount');
+    const noResults = document.getElementById('noResultsNotice');
+
+    function filterVets() {
+        const query = searchInput ? searchInput.value.toLowerCase().trim() : '';
+        const emergencyOnly = emergencyFilter ? emergencyFilter.value === 'emergency' : false;
+        let visible = 0;
+
+        cards.forEach(card => {
+            const name = card.dataset.name || '';
+            const clinic = card.dataset.clinic || '';
+            const specialty = card.dataset.specialty || '';
+            const address = card.dataset.address || '';
+            const isEmergency = card.dataset.emergency === 'true';
+
+            const matchesQuery = !query || 
+                name.includes(query) || 
+                clinic.includes(query) || 
+                specialty.includes(query) || 
+                address.includes(query);
+
+            const matchesEmergency = !emergencyOnly || isEmergency;
+
+            if (matchesQuery && matchesEmergency) {
+                card.style.display = 'flex';
+                visible++;
+            } else {
+                card.style.display = 'none';
+            }
+        });
+
+        if (countDisplay) countDisplay.textContent = visible;
+        if (noResults) noResults.style.display = visible === 0 ? 'block' : 'none';
+    }
+
+    if (searchInput) searchInput.addEventListener('input', filterVets);
+    if (emergencyFilter) emergencyFilter.addEventListener('change', filterVets);
+});
+
+// Modal functions
+function openAddVetModal() {
+    document.getElementById('addVetModal').style.display = 'flex';
+}
+function closeAddVetModal() {
+    document.getElementById('addVetModal').style.display = 'none';
+}
+</script>
+{% endblock %}

@@ -1,0 +1,223 @@
+{% extends 'base.html' %}
+
+{% block title %}Case #{{ case.case_number }} - GoShala Care{% endblock %}
+{% block page_title %}Clinical Case Review: #{{ case.case_number }}{% endblock %}
+{% block page_subtitle %}Bovine patient {{ case.cow.name }} (Tag: {{ case.cow.tag_id }}) — Submitted {{ case.created_at.strftime('%b %d, %Y at %H:%M') }}{% endblock %}
+
+{% block topbar_actions %}
+<a href="{{ url_for('vet.dashboard') }}" class="btn btn-outline btn-sm">
+    <i class="bi bi-arrow-left"></i> Back to Queue
+</a>
+{% endblock %}
+
+{% block content %}
+<div style="display: grid; grid-template-columns: 1.5fr 1fr; gap: 24px; margin-bottom: 28px;">
+    <!-- Left Column: Patient & Diagnostic Evidence -->
+    <div>
+        <!-- Patient Banner -->
+        <div class="card" style="margin-bottom: 20px;">
+            <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+                <h3><i class="bi bi-tag-fill text-success"></i> Patient & Farmer Demographics</h3>
+                <span class="badge-risk {{ case.urgency }}">{{ case.urgency }} Urgency</span>
+            </div>
+            <div class="card-body">
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 14px;">
+                    <div>
+                        <span style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase;">Cattle Name & Tag</span>
+                        <strong style="display: block; font-size: 0.95rem; color: var(--brand-primary);">{{ case.cow.name }} ({{ case.cow.tag_id }})</strong>
+                    </div>
+                    <div>
+                        <span style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase;">Breed & Lactation</span>
+                        <strong style="display: block; font-size: 0.95rem;">{{ case.cow.breed }} ({{ case.cow.lactation_stage }})</strong>
+                    </div>
+                    <div>
+                        <span style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase;">Owner / Farmer</span>
+                        <strong style="display: block; font-size: 0.95rem;">{{ case.farmer.full_name }}</strong>
+                    </div>
+                    <div>
+                        <span style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase;">Farmer Phone / Location</span>
+                        <a href="tel:{{ case.farmer.phone }}" style="font-weight: 600; color: var(--brand-accent); display: block;">
+                            <i class="bi bi-telephone-fill"></i> {{ case.farmer.phone or 'Not provided' }}
+                        </a>
+                        <span style="font-size: 0.75rem; color: var(--text-muted);">{{ case.farmer.location or 'Region unlisted' }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Telemetry Evidence: Vitals or Photo -->
+        {% if case.vitals_log %}
+            <div class="card" style="margin-bottom: 20px;">
+                <div class="card-header">
+                    <h3><i class="bi bi-clipboard2-pulse text-primary"></i> Daily Vitals Telemetry (Log #{{ case.vitals_log.id }})</h3>
+                </div>
+                <div class="card-body">
+                    <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 16px;">
+                        <div style="background: var(--bg-subtle); padding: 10px; border-radius: 6px; text-align: center;">
+                            <span style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase;">Temperature</span>
+                            <div style="font-size: 1.25rem; font-weight: 700; color: {% if case.vitals_log.temperature > 39.3 or case.vitals_log.temperature < 38.0 %}var(--risk-high){% else %}var(--risk-low){% endif %};">
+                                {{ case.vitals_log.temperature }}°C
+                            </div>
+                        </div>
+
+                        <div style="background: var(--bg-subtle); padding: 10px; border-radius: 6px; text-align: center;">
+                            <span style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase;">Milk Yield</span>
+                            <div style="font-size: 1.25rem; font-weight: 700; color: var(--brand-primary);">
+                                {{ case.vitals_log.milk_yield }} L
+                            </div>
+                        </div>
+
+                        <div style="background: var(--bg-subtle); padding: 10px; border-radius: 6px; text-align: center;">
+                            <span style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase;">Feed Intake</span>
+                            <div style="font-size: 1.1rem; font-weight: 600; text-transform: capitalize; color: {% if case.vitals_log.feed_intake != 'normal' %}var(--risk-mod){% else %}var(--risk-low){% endif %};">
+                                {{ case.vitals_log.feed_intake }}
+                            </div>
+                        </div>
+
+                        <div style="background: var(--bg-subtle); padding: 10px; border-radius: 6px; text-align: center;">
+                            <span style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase;">Water Intake</span>
+                            <div style="font-size: 1.1rem; font-weight: 600; text-transform: capitalize; color: {% if case.vitals_log.water_intake != 'normal' %}var(--risk-mod){% else %}var(--risk-low){% endif %};">
+                                {{ case.vitals_log.water_intake }}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style="margin-top: 14px;">
+                        <span style="font-size: 0.85rem; font-weight: 600; color: var(--text-secondary);">Observed Symptoms:</span>
+                        <div style="display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px;">
+                            {% if case.vitals_log.symptoms_list %}
+                                {% for s in case.vitals_log.symptoms_list %}
+                                    <span style="background: #fee2e2; color: #991b1b; padding: 4px 10px; border-radius: 4px; font-size: 0.82rem; font-weight: 600;">
+                                        {{ s.replace('_', ' ') }}
+                                    </span>
+                                {% endfor %}
+                            {% else %}
+                                <span style="font-size: 0.85rem; color: var(--text-muted);">None reported</span>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    {% if case.vitals_log.other_symptoms %}
+                        <div style="margin-top: 12px; font-size: 0.85rem;">
+                            <strong>Farmer Free-Text Notes:</strong> "{{ case.vitals_log.other_symptoms }}"
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        {% endif %}
+
+        {% if case.photo_scan %}
+            <div class="card" style="margin-bottom: 20px;">
+                <div class="card-header">
+                    <h3><i class="bi bi-camera text-primary"></i> Uploaded Photo Evidence</h3>
+                </div>
+                <div class="card-body" style="text-align: center;">
+                    <img src="{{ case.photo_scan.image_path }}" alt="Bovine Scan" style="max-height: 280px; border-radius: var(--radius-sm); border: 2px solid var(--border-color); box-shadow: var(--shadow-sm);">
+                    <div style="margin-top: 12px; font-size: 0.9rem;">
+                        <strong>Target Region:</strong> {{ case.photo_scan.body_part.title() }} | 
+                        <strong>AI Classification:</strong> {{ case.photo_scan.predicted_label }} ({{ (case.photo_scan.confidence * 100)|round(1) }}% confidence)
+                    </div>
+                </div>
+            </div>
+        {% endif %}
+
+        <!-- Longitudinal Trend History Table -->
+        <div class="card">
+            <div class="card-header">
+                <h3><i class="bi bi-clock-history text-secondary"></i> Patient 7-Day Rolling History</h3>
+            </div>
+            <div class="card-body" style="padding: 0;">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Temp</th>
+                            <th>Feed</th>
+                            <th>Milk (L)</th>
+                            <th>Symptoms Reported</th>
+                            <th>Risk</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for h in cow_history %}
+                            <tr>
+                                <td>{{ h.log_date.strftime('%b %d') }}</td>
+                                <td>{{ h.temperature }}°C</td>
+                                <td style="text-transform: capitalize;">{{ h.feed_intake }}</td>
+                                <td>{{ h.milk_yield }} L</td>
+                                <td>{{ h.symptoms_list|join(', ')|replace('_', ' ') or 'None' }}</td>
+                                <td><span class="badge-risk {{ h.calculated_risk }}">{{ h.calculated_risk }}</span></td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Right Column: AI Explanations & Veterinary Action -->
+    <div>
+        <!-- AI Diagnosis & Rule Engine Explanations -->
+        <div class="card" style="margin-bottom: 20px;">
+            <div class="card-header" style="background: var(--bg-subtle);">
+                <h3><i class="bi bi-cpu text-accent"></i> Explainable Decision Engine</h3>
+            </div>
+            <div class="card-body">
+                <div style="margin-bottom: 14px;">
+                    <span style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase;">Suspected Primary Pathology</span>
+                    <h3 style="font-size: 1.3rem; color: var(--brand-primary); margin-top: 2px;">
+                        {{ case.suspected_disease }}
+                    </h3>
+                </div>
+
+                <div class="explain-box" style="margin: 12px 0;">
+                    <h4><i class="bi bi-shield-exclamation"></i> Rule Threshold Violations</h4>
+                    <p style="white-space: pre-line; font-size: 0.88rem; color: var(--text-primary);">
+                        {{ case.rule_explanation or 'No explicit rules logged.' }}
+                    </p>
+                </div>
+
+                {% if case.ml_prediction_summary %}
+                    <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 12px; font-size: 0.85rem; color: #334155;">
+                        <strong><i class="bi bi-robot"></i> Machine Learning Telemetry:</strong>
+                        <p style="margin-top: 4px;">{{ case.ml_prediction_summary }}</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Veterinary Feedback & Prescription Form -->
+        <div class="card">
+            <div class="card-header" style="background: linear-gradient(135deg, #1b4332, #2d6a4f); color: white;">
+                <h3 style="color: white;"><i class="bi bi-chat-heart"></i> Veterinary Advice & Prescription</h3>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('vet.case_detail', case_id=case.id) }}">
+                    <div class="form-group">
+                        <label class="form-label" for="status">Case Triage Status *</label>
+                        <select id="status" name="status" class="form-control" required>
+                            <option value="in_review" {% if case.status == 'in_review' %}selected{% endif %}>In Review (Awaiting Lab / Action)</option>
+                            <option value="resolved" {% if case.status == 'resolved' %}selected{% endif %}>Resolved (Advice & Rx Issued)</option>
+                            <option value="closed" {% if case.status == 'closed' %}selected{% endif %}>Closed (Discharged / Stable)</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="vet_notes">Clinical Assessment & Advice for Farmer *</label>
+                        <textarea id="vet_notes" name="vet_notes" class="form-control" rows="4" placeholder="Detail your clinical findings, diagnosis, and advice on nursing care..." required>{{ case.vet_notes or '' }}</textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="vet_recommendation">Medication / Prescription / Quarantine Steps</label>
+                        <textarea id="vet_recommendation" name="vet_recommendation" class="form-control" rows="3" placeholder="e.g. Intramammary antibiotic infusion; isolate for 14 days; administer calcium borogluconate IV...">{{ case.vet_recommendation or '' }}</textarea>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary" style="width: 100%; justify-content: center; padding: 12px; font-size: 1rem;">
+                        <i class="bi bi-send-check"></i> Submit Clinical Response to Farmer
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

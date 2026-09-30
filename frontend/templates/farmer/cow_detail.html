@@ -1,0 +1,270 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ cow.name }} ({{ cow.tag_id }}) - GoShala Care{% endblock %}
+{% block page_title %}{{ cow.name }} — Health Profile{% endblock %}
+{% block page_subtitle %}Tag ID: {{ cow.tag_id }} | Breed: {{ cow.breed }} | Lactation: {{ cow.lactation_stage }}{% endblock %}
+
+{% block topbar_actions %}
+<a href="{{ url_for('farmer.log_vitals') }}?cow_id={{ cow.id }}" class="btn btn-primary btn-sm">
+    <i class="bi bi-pencil-square"></i> Log Daily Vitals
+</a>
+<a href="{{ url_for('farmer.photo_scan') }}?cow_id={{ cow.id }}" class="btn btn-accent btn-sm">
+    <i class="bi bi-camera"></i> Scan Photo
+</a>
+{% endblock %}
+
+{% block content %}
+<!-- Cow Identity Card -->
+<div class="card" style="margin-bottom: 24px;">
+    <div class="card-body" style="display: flex; gap: 24px; align-items: center; flex-wrap: wrap;">
+        {% if cow.photo_url %}
+            <img src="{{ cow.photo_url }}" alt="{{ cow.name }}" style="width: 120px; height: 120px; border-radius: var(--radius-md); object-fit: cover; border: 3px solid var(--border-color); box-shadow: var(--shadow-sm);">
+        {% else %}
+            <div style="width: 120px; height: 120px; border-radius: var(--radius-md); background: linear-gradient(135deg, #e8f5e9, #c8e6c9); display: flex; align-items: center; justify-content: center; font-size: 48px; color: var(--brand-primary);">
+                <i class="bi bi-tag"></i>
+            </div>
+        {% endif %}
+
+        <div style="flex-grow: 1;">
+            <div style="display: flex; align-items: center; gap: 12px;">
+                <h2 style="font-size: 1.6rem; color: var(--brand-primary-dark);">{{ cow.name }}</h2>
+                <span class="badge-status in_review" style="background-color: var(--brand-accent-soft); color: var(--brand-accent); font-weight: 700;">
+                    TAG: {{ cow.tag_id }}
+                </span>
+                {% if cow.latest_vitals %}
+                    <span class="badge-risk {{ cow.latest_vitals.calculated_risk }}">Current Status: {{ cow.latest_vitals.calculated_risk }}</span>
+                {% endif %}
+            </div>
+
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 16px; margin-top: 14px;">
+                <div>
+                    <span style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase;">Breed</span>
+                    <strong style="display: block; font-size: 0.95rem;">{{ cow.breed }}</strong>
+                </div>
+                <div>
+                    <span style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase;">Lactation Stage</span>
+                    <strong style="display: block; font-size: 0.95rem;">{{ cow.lactation_stage }}</strong>
+                </div>
+                <div>
+                    <span style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase;">Birth Date</span>
+                    <strong style="display: block; font-size: 0.95rem;">{{ cow.date_of_birth.strftime('%b %d, %Y') if cow.date_of_birth else 'Not recorded' }}</strong>
+                </div>
+                <div>
+                    <span style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase;">Registered On</span>
+                    <strong style="display: block; font-size: 0.95rem;">{{ cow.created_at.strftime('%b %d, %Y') }}</strong>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Longitudinal Trends Chart -->
+<div class="card">
+    <div class="card-header">
+        <h3><i class="bi bi-graph-up text-primary"></i> Longitudinal Temperature (°C) & Milk Yield (L) Trajectory</h3>
+        <span style="font-size: 0.8rem; color: var(--text-muted);">Real-time rolling history</span>
+    </div>
+    <div class="card-body">
+        <div style="height: 280px; width: 100%;">
+            <canvas id="cowTrajectoryChart"></canvas>
+        </div>
+    </div>
+</div>
+
+<!-- Cases / Triage History -->
+{% if cases %}
+<div class="card">
+    <div class="card-header">
+        <h3><i class="bi bi-hospital text-danger"></i> Clinical Triage Cases & Vet Feedback</h3>
+    </div>
+    <div class="card-body" style="padding: 0;">
+        <div class="table-responsive">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Case #</th>
+                        <th>Created</th>
+                        <th>Source</th>
+                        <th>Suspected Condition</th>
+                        <th>Urgency</th>
+                        <th>Status</th>
+                        <th>Veterinarian Feedback</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for c in cases %}
+                        <tr>
+                            <td><strong>{{ c.case_number }}</strong></td>
+                            <td>{{ c.created_at.strftime('%b %d, %Y') }}</td>
+                            <td><span style="text-transform: capitalize;">{{ c.source }}</span></td>
+                            <td><strong>{{ c.suspected_disease }}</strong></td>
+                            <td><span class="badge-risk {{ c.urgency }}">{{ c.urgency }}</span></td>
+                            <td><span class="badge-status {{ c.status }}">{{ c.status.replace('_', ' ') }}</span></td>
+                            <td style="font-size: 0.85rem; max-width: 320px;">
+                                {% if c.vet_notes %}
+                                    <div style="background: var(--bg-subtle); padding: 8px 10px; border-radius: 6px; border-left: 3px solid var(--brand-primary);">
+                                        <strong>Dr. Review:</strong> {{ c.vet_notes }}
+                                        {% if c.vet_recommendation %}
+                                            <div style="margin-top: 4px; color: var(--brand-accent); font-weight: 600;">
+                                                Rx: {{ c.vet_recommendation }}
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                {% else %}
+                                    <span style="color: var(--text-muted);"><i class="bi bi-clock"></i> In review queue</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Full Vitals Log History -->
+<div class="card">
+    <div class="card-header">
+        <h3><i class="bi bi-card-checklist text-success"></i> Recorded Daily Health Logs</h3>
+    </div>
+    <div class="card-body" style="padding: 0;">
+        <div class="table-responsive">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Temp</th>
+                        <th>Feed</th>
+                        <th>Water</th>
+                        <th>Milk (L)</th>
+                        <th>Symptoms</th>
+                        <th>Calculated Risk</th>
+                        <th>Everyday Comparison & Classification</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if logs %}
+                        {% for l in logs %}
+                            <tr>
+                                <td><strong>{{ l.log_date.strftime('%b %d, %Y') }}</strong></td>
+                                <td>
+                                    <span style="{% if l.temperature > 39.3 or l.temperature < 38.0 %}color: var(--risk-high); font-weight: 700;{% endif %}">
+                                        {{ l.temperature }}°C
+                                    </span>
+                                </td>
+                                <td>
+                                    <span style="text-transform: capitalize;">{{ l.feed_intake }}</span>
+                                    {% if l.feed_quantity_kg %}<small style="color: var(--text-muted); display: block;">{{ l.feed_quantity_kg }} kg</small>{% endif %}
+                                </td>
+                                <td>
+                                    <span style="text-transform: capitalize;">{{ l.water_intake }}</span>
+                                    {% if l.water_intake_litres %}<small style="color: var(--text-muted); display: block;">{{ l.water_intake_litres }} L</small>{% endif %}
+                                </td>
+                                <td><strong>{{ l.milk_yield }} L</strong></td>
+                                <td>
+                                    {% if l.symptoms_list %}
+                                        <div style="display: flex; flex-wrap: wrap; gap: 4px;">
+                                            {% for s in l.symptoms_list %}
+                                                <span style="font-size: 0.72rem; background: var(--bg-subtle); padding: 2px 6px; border-radius: 4px;">
+                                                    {{ s.replace('_', ' ') }}
+                                                </span>
+                                            {% endfor %}
+                                        </div>
+                                    {% else %}
+                                        <span style="color: var(--text-muted); font-size: 0.8rem;">None</span>
+                                    {% endif %}
+                                </td>
+                                <td><span class="badge-risk {{ l.calculated_risk }}">{{ l.calculated_risk }}</span></td>
+                                <td>
+                                    {% if l.predicted_disease %}
+                                        <strong style="display: block; font-size: 0.82rem; color: {% if l.calculated_risk == 'High' %}#dc2626{% elif l.calculated_risk == 'Moderate' %}#d97706{% else %}#15803d{% endif %};">
+                                            {{ l.predicted_disease }}
+                                        </strong>
+                                    {% endif %}
+                                    <a href="{{ url_for('farmer.vitals_comparison', log_id=l.id) }}" class="btn btn-sm btn-outline" style="font-size: 0.75rem; padding: 3px 8px; margin-top: 3px;">
+                                        <i class="bi bi-bar-chart-fill"></i> View Benchmark Report
+                                    </a>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr>
+                            <td colspan="8" style="text-align: center; padding: 30px; color: var(--text-muted);">
+                                No vitals logs recorded for this cow yet.
+                            </td>
+                        </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    fetch('/api/farmer/cow/{{ cow.id }}/vitals_trend')
+        .then(res => res.json())
+        .then(data => {
+            const ctx = document.getElementById('cowTrajectoryChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: data.labels,
+                    datasets: [
+                        {
+                            label: 'Temperature (°C)',
+                            data: data.temperatures,
+                            borderColor: '#dc2626',
+                            backgroundColor: 'rgba(220, 38, 38, 0.05)',
+                            yAxisID: 'yTemp',
+                            tension: 0.3,
+                            borderWidth: 2,
+                            pointRadius: 4
+                        },
+                        {
+                            label: 'Milk Yield (Litres)',
+                            data: data.milk_yields,
+                            borderColor: '#2d6a4f',
+                            backgroundColor: 'rgba(45, 106, 79, 0.1)',
+                            yAxisID: 'yMilk',
+                            fill: true,
+                            tension: 0.3,
+                            borderWidth: 2,
+                            pointRadius: 4
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        yTemp: {
+                            type: 'linear',
+                            position: 'left',
+                            min: 36.5,
+                            max: 42.0,
+                            title: { display: true, text: 'Temperature (°C)' },
+                            grid: { color: '#f3efe6' }
+                        },
+                        yMilk: {
+                            type: 'linear',
+                            position: 'right',
+                            beginAtZero: true,
+                            title: { display: true, text: 'Milk Yield (Litres)' },
+                            grid: { display: false }
+                        },
+                        x: {
+                            grid: { display: false }
+                        }
+                    }
+                }
+            });
+        })
+        .catch(e => console.error("Error loading cow trend:", e));
+});
+</script>
+{% endblock %}

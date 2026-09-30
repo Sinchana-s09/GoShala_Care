@@ -1,0 +1,190 @@
+{
+  "tabular_model": {
+    "status": "trained",
+    "last_trained": "2026-09-29 21:46:20",
+    "accuracy": 1.0,
+    "classes": [
+      "High",
+      "Low",
+      "Moderate"
+    ],
+    "per_class": {
+      "High": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1_score": 1.0,
+        "support": 24
+      },
+      "Low": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1_score": 1.0,
+        "support": 253
+      },
+      "Moderate": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1_score": 1.0,
+        "support": 23
+      }
+    },
+    "confusion_matrix": [
+      [
+        24,
+        0,
+        0
+      ],
+      [
+        0,
+        253,
+        0
+      ],
+      [
+        0,
+        0,
+        23
+      ]
+    ],
+    "top_features": {
+      "feed_code": 0.2127,
+      "intake_deficit_score": 0.209,
+      "fever": 0.1072,
+      "feed_issue_rolling_3d": 0.1005,
+      "temperature": 0.0935,
+      "symptom_count": 0.0624,
+      "milk_yield": 0.0582,
+      "sweet_breath": 0.033
+    },
+    "eda": {
+      "class_balance": {
+        "Low": 1013,
+        "High": 96,
+        "Moderate": 91
+      },
+      "total_samples": 1200,
+      "mean_temp": 38.66,
+      "mean_milk": 15.88,
+      "symptom_frequency": {
+        "fever": 75,
+        "milk_drop": 53,
+        "mouth_blisters": 28,
+        "skin_lumps": 21,
+        "limping": 28,
+        "not_eating": 48,
+        "swollen_udder": 26,
+        "bloat": 7,
+        "downer_cow": 14,
+        "abortion": 0,
+        "leg_swelling": 0,
+        "breathing_difficulty": 7,
+        "sweet_breath": 27,
+        "tremor_cold_ears": 14
+      }
+    },
+    "clean_report": {
+      "initial_rows": 1200,
+      "null_values_filled": 0,
+      "invalid_temp_removed": 0,
+      "invalid_milk_removed": 0,
+      "final_rows": 1200,
+      "cleaning_log": [
+        "Cleaned dataset: 1200 valid records retained out of 1200."
+      ]
+    }
+  },
+  "image_model": {
+    "status": "trained",
+    "last_trained": "2026-09-29 21:46:23",
+    "accuracy": 1.0,
+    "classes": [
+      "foot_lesion",
+      "healthy",
+      "lumpy_skin",
+      "mastitis"
+    ],
+    "per_class": {
+      "foot_lesion": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1_score": 1.0,
+        "support": 5
+      },
+      "healthy": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1_score": 1.0,
+        "support": 4
+      },
+      "lumpy_skin": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1_score": 1.0,
+        "support": 5
+      },
+      "mastitis": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1_score": 1.0,
+        "support": 4
+      }
+    },
+    "confusion_matrix": [
+      [
+        5,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        4,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        5,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        4
+      ]
+    ],
+    "audit_report": {
+      "total_images": 72,
+      "valid_images": 55,
+      "corrupted_images": 0,
+      "duplicate_images": 17,
+      "classes_found": {
+        "foot_lesion": 1,
+        "healthy": 18,
+        "lumpy_skin": 18,
+        "mastitis": 18
+      },
+      "log": [
+        "Duplicate image found: foot_lesion_002.jpg",
+        "Duplicate image found: foot_lesion_003.jpg",
+        "Duplicate image found: foot_lesion_004.jpg",
+        "Duplicate image found: foot_lesion_005.jpg",
+        "Duplicate image found: foot_lesion_006.jpg",
+        "Duplicate image found: foot_lesion_007.jpg",
+        "Duplicate image found: foot_lesion_008.jpg",
+        "Duplicate image found: foot_lesion_009.jpg",
+        "Duplicate image found: foot_lesion_010.jpg",
+        "Duplicate image found: foot_lesion_011.jpg",
+        "Duplicate image found: foot_lesion_012.jpg",
+        "Duplicate image found: foot_lesion_013.jpg",
+        "Duplicate image found: foot_lesion_014.jpg",
+        "Duplicate image found: foot_lesion_015.jpg",
+        "Duplicate image found: foot_lesion_016.jpg",
+        "Duplicate image found: foot_lesion_017.jpg",
+        "Duplicate image found: foot_lesion_018.jpg",
+        "Image Audit complete: 55 valid images across 4 classes."
+      ]
+    }
+  }
+}

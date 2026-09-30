@@ -1,0 +1,132 @@
+{% extends 'base.html' %}
+
+{% block title %}Manage Disease & Rule Library - GoShala Care{% endblock %}
+{% block page_title %}Disease Reference & Rule Knowledge Base{% endblock %}
+{% block page_subtitle %}Single source of truth: clinical definitions, symptoms, urgency ratings, and explainable rule weights{% endblock %}
+
+{% block topbar_actions %}
+<button type="button" class="btn btn-primary btn-sm" onclick="document.getElementById('addDiseaseModal').style.display='flex'">
+    <i class="bi bi-plus-circle"></i> Add Disease Definition
+</button>
+{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <h3><i class="bi bi-book-half text-success"></i> Disease Reference Entries ({{ diseases|length }})</h3>
+        <span style="font-size: 0.8rem; color: var(--text-muted);">Backs both the public knowledge library and the threshold rule classifier</span>
+    </div>
+    <div class="card-body" style="padding: 0;">
+        <div class="table-responsive">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Disease Name</th>
+                        <th>Scientific / Etiology</th>
+                        <th>Urgency</th>
+                        <th>Key Clinical Indicators</th>
+                        <th>Mapped Symptoms</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for d in diseases %}
+                        <tr>
+                            <td><strong style="color: var(--brand-primary); font-size: 0.95rem;">{{ d.name }}</strong></td>
+                            <td style="font-style: italic; color: var(--text-muted);">{{ d.scientific_name or 'N/A' }}</td>
+                            <td><span class="badge-risk {{ d.urgency_level }}">{{ d.urgency_level }}</span></td>
+                            <td style="font-size: 0.84rem; max-width: 300px;">{{ d.key_indicators or d.description[:120] }}...</td>
+                            <td>
+                                <div style="display: flex; flex-wrap: wrap; gap: 4px;">
+                                    {% for ds in d.symptoms %}
+                                        <span style="font-size: 0.72rem; background: var(--bg-subtle); padding: 2px 6px; border-radius: 4px; border: 1px solid var(--border-color);">
+                                            {{ ds.symptom_code.replace('_', ' ') }}
+                                        </span>
+                                    {% endfor %}
+                                </div>
+                            </td>
+                            <td>
+                                <form method="POST" action="{{ url_for('admin.delete_disease', disease_id=d.id) }}" style="display: inline;">
+                                    <button type="submit" class="btn btn-sm btn-outline" style="color: #dc2626; border-color: #fca5a5;" onclick="return confirm('Delete {{ d.name }} from library and rule classifier?')">
+                                        <i class="bi bi-trash"></i> Delete
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Add New Disease -->
+<div id="addDiseaseModal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center; padding: 20px;">
+    <div class="card" style="width: 100%; max-width: 650px; max-height: 90vh; overflow-y: auto; box-shadow: var(--shadow-lg); margin-bottom: 0;">
+        <div class="card-header">
+            <h3><i class="bi bi-journal-plus text-success"></i> Add Disease Definition & Rule Weights</h3>
+            <button type="button" style="background: none; border: none; font-size: 1.4rem; cursor: pointer;" onclick="document.getElementById('addDiseaseModal').style.display='none'">&times;</button>
+        </div>
+        <div class="card-body">
+            <form method="POST" action="{{ url_for('admin.diseases') }}">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label" for="name">Common Disease Name *</label>
+                        <input type="text" id="name" name="name" class="form-control" placeholder="e.g. Haemorrhagic Septicaemia" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="scientific_name">Pathogen / Scientific Name</label>
+                        <input type="text" id="scientific_name" name="scientific_name" class="form-control" placeholder="e.g. Pasteurella multocida">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="urgency_level">Urgency Level *</label>
+                    <select id="urgency_level" name="urgency_level" class="form-control" required>
+                        <option value="High">High (Immediate Veterinary Intervention Required)</option>
+                        <option value="Moderate" selected>Moderate (Requires Clinical Observation & Triage)</option>
+                        <option value="Low">Low (Mild Condition / Dietary Adjustment)</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="description">Clinical Description & Pathophysiology *</label>
+                    <textarea id="description" name="description" class="form-control" rows="3" placeholder="Explain the disease etiology, transmission, and bovine impact..." required></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="key_indicators">Key Diagnostic Markers</label>
+                    <textarea id="key_indicators" name="key_indicators" class="form-control" rows="2" placeholder="e.g. Hot swollen throat, sudden high fever, grunting respiration..."></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="prevention_guidance">Prevention & Biosecurity Guidance *</label>
+                    <textarea id="prevention_guidance" name="prevention_guidance" class="form-control" rows="2" placeholder="e.g. Pre-monsoon vaccination, dry housing..." required></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="first_aid">Emergency First-Aid / Stabilization</label>
+                    <textarea id="first_aid" name="first_aid" class="form-control" rows="2" placeholder="e.g. Isolate animal immediately, cold pack application..."></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Associate Primary Symptoms (Rule Engine Triggers):</label>
+                    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; max-height: 160px; overflow-y: auto; background: var(--bg-subtle); padding: 12px; border-radius: var(--radius-sm); border: 1px solid var(--border-color);">
+                        {% for s in symptoms %}
+                            <label style="display: flex; align-items: center; gap: 8px; font-size: 0.84rem; cursor: pointer;">
+                                <input type="checkbox" name="symptoms" value="{{ s.code }}" style="accent-color: var(--brand-primary);">
+                                {{ s.display_name }}
+                            </label>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <div style="display: flex; justify-content: flex-end; gap: 12px; margin-top: 24px;">
+                    <button type="button" class="btn btn-outline" onclick="document.getElementById('addDiseaseModal').style.display='none'">Cancel</button>
+                    <button type="submit" class="btn btn-primary"><i class="bi bi-check-circle"></i> Save to Reference & Rules</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

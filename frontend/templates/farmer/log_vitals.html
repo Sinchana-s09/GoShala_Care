@@ -1,0 +1,266 @@
+{% extends 'base.html' %}
+
+{% block title %}Log Daily Vitals - GoShala Care{% endblock %}
+{% block page_title %}Daily Vitals & Symptom Screening{% endblock %}
+{% block page_subtitle %}Two-layer AI screening: clinical rule thresholds + rolling 3-7 day trend machine learning{% endblock %}
+
+{% block content %}
+<div style="max-width: 860px; margin: 0 auto;">
+    <div class="card" style="box-shadow: var(--shadow-md);">
+        <div class="card-header">
+            <h3><i class="bi bi-clipboard2-pulse-fill text-success"></i> Cattle Health Log Sheet</h3>
+            <span style="font-size: 0.82rem; color: var(--text-muted);">Routine non-invasive manual telemetry</span>
+        </div>
+
+        <div class="card-body">
+            {% if not cows %}
+                <div style="background: #fef3c7; border: 1px solid #f59e0b; border-radius: 8px; padding: 16px; margin-bottom: 22px;">
+                    <h4 style="color: #92400e; margin: 0 0 6px 0; font-size: 0.95rem;">
+                        <i class="bi bi-exclamation-triangle-fill"></i> No Cattle in Your Herd
+                    </h4>
+                    <p style="color: #78350f; font-size: 0.85rem; margin: 0 0 12px 0;">
+                        You must register at least one cow to log daily vitals and view telemetry comparisons.
+                    </p>
+                    <a href="{{ url_for('farmer.cows') }}" class="btn btn-primary btn-sm">
+                        <i class="bi bi-plus-circle"></i> + Add Cow to Herd First
+                    </a>
+                </div>
+            {% endif %}
+
+            <form method="POST" action="{{ url_for('farmer.log_vitals') }}">
+                <!-- Target Cow & Date -->
+                <div class="form-row" style="margin-bottom: 24px;">
+                    <div class="form-group">
+                        <label class="form-label" for="cow_id">Select Cattle *</label>
+                        <select id="cow_id" name="cow_id" class="form-control" required>
+                            <option value="">-- Choose Cow from Your Herd --</option>
+                            {% for c in cows %}
+                                <option value="{{ c.id }}" {% if request.args.get('cow_id')|int == c.id or loop.first %}selected{% endif %}>
+                                    {{ c.name }} (Tag: {{ c.tag_id }}) — {{ c.breed }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="log_date">Log Date *</label>
+                        <input type="date" id="log_date" name="log_date" class="form-control" value="{{ today }}" required>
+                    </div>
+                </div>
+
+                <!-- Core Physical Vitals & Everyday Requirements -->
+                <div style="background-color: #faf7f2; border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 20px; margin-bottom: 24px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                        <h4 style="font-size: 1.05rem; color: var(--brand-primary); margin: 0;">
+                            <i class="bi bi-thermometer-half text-danger"></i> 1. Everyday Physiological Vitals & Intake
+                        </h4>
+                        <span class="badge" style="background: #e0f2fe; color: #0284c7; font-weight: 600; font-size: 0.78rem;">
+                            <i class="bi bi-shield-check"></i> Standard Benchmark Aligned
+                        </span>
+                    </div>
+
+                    <div class="form-row">
+                        <!-- Temperature -->
+                        <div class="form-group">
+                            <label class="form-label" for="temperatureInput">
+                                Rectal Temperature (°C) *
+                                <span style="font-size: 0.75rem; color: var(--text-muted); font-weight: normal;">(Normal: 38.2 - 39.3°C)</span>
+                            </label>
+                            <input type="number" step="0.1" min="32.0" max="45.0" id="temperatureInput" name="temperature" class="form-control" placeholder="38.5" value="38.5" required>
+                            <div id="tempClinicalNotice" style="font-size: 0.8rem; margin-top: 5px;"></div>
+                        </div>
+
+                        <!-- Milk Yield -->
+                        <div class="form-group">
+                            <label class="form-label" for="milk_yield">
+                                Daily Milk Yield (Litres) *
+                                <span style="font-size: 0.75rem; color: var(--text-muted); font-weight: normal;">(Typical: 8 - 20 L)</span>
+                            </label>
+                            <input type="number" step="0.1" min="0" max="60" id="milk_yield" name="milk_yield" class="form-control" placeholder="12.0" value="12.0" required>
+                        </div>
+                    </div>
+
+                    <!-- Daily Feed & Water Everyday Requirements -->
+                    <div class="form-row" style="margin-top: 14px;">
+                        <div class="form-group">
+                            <label class="form-label" for="feed_quantity_kg">
+                                Food Intake Quantity (kg/day)
+                                <span style="font-size: 0.75rem; color: var(--text-muted); font-weight: normal;">(Required: 12 - 22 kg)</span>
+                            </label>
+                            <input type="number" step="0.5" min="0" max="40" id="feed_quantity_kg" name="feed_quantity_kg" class="form-control" placeholder="16.5" value="16.5">
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label" for="water_intake_litres">
+                                Water Intake (Litres/day)
+                                <span style="font-size: 0.75rem; color: var(--text-muted); font-weight: normal;">(Required: 45 - 75 L)</span>
+                            </label>
+                            <input type="number" step="1.0" min="0" max="150" id="water_intake_litres" name="water_intake_litres" class="form-control" placeholder="60.0" value="60.0">
+                        </div>
+                    </div>
+
+                    <!-- Intake Selectors -->
+                    <div class="form-row" style="margin-top: 14px;">
+                        <div class="form-group">
+                            <label class="form-label">Feed Appetite Status *</label>
+                            <div class="pill-selector">
+                                <input type="radio" id="feed_normal" name="feed_intake" value="normal" checked>
+                                <label for="feed_normal">Normal</label>
+
+                                <input type="radio" id="feed_reduced" name="feed_intake" value="reduced">
+                                <label for="feed_reduced">Reduced</label>
+
+                                <input type="radio" id="feed_none" name="feed_intake" value="none">
+                                <label for="feed_none">None (Off Feed)</label>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">Water Hydration Status *</label>
+                            <div class="pill-selector">
+                                <input type="radio" id="water_normal" name="water_intake" value="normal" checked>
+                                <label for="water_normal">Normal</label>
+
+                                <input type="radio" id="water_reduced" name="water_intake" value="reduced">
+                                <label for="water_reduced">Reduced</label>
+
+                                <input type="radio" id="water_none" name="water_intake" value="none">
+                                <label for="water_none">None (Refusing)</label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Physical Activity & Rumination Section -->
+                <div style="background-color: #f0fdf4; border: 1px solid #bbf7d0; border-radius: var(--radius-sm); padding: 20px; margin-bottom: 24px;">
+                    <h4 style="font-size: 1.05rem; color: #166534; margin-bottom: 16px;">
+                        <i class="bi bi-activity text-success"></i> 2. Everyday Physical Activity & Rumination
+                    </h4>
+
+                    <div class="form-row">
+                        <!-- Walking Distance -->
+                        <div class="form-group">
+                            <label class="form-label" for="walking_distance_km">
+                                Walking / Mobility (km/day)
+                                <span style="font-size: 0.75rem; color: var(--text-muted); font-weight: normal;">(Normal: 3.0 - 6.5 km)</span>
+                            </label>
+                            <input type="number" step="0.1" min="0" max="25" id="walking_distance_km" name="walking_distance_km" class="form-control" placeholder="4.5" value="4.5">
+                            <span style="font-size: 0.75rem; color: var(--text-muted);">Lower values indicate lameness, lethargy or pain.</span>
+                        </div>
+
+                        <!-- Rumination Time -->
+                        <div class="form-group">
+                            <label class="form-label" for="rumination_time_hrs">
+                                Rumination Time (Cud Chewing hrs/day)
+                                <span style="font-size: 0.75rem; color: var(--text-muted); font-weight: normal;">(Optimal: 6.5 - 9.5 hrs)</span>
+                            </label>
+                            <input type="number" step="0.2" min="0" max="18" id="rumination_time_hrs" name="rumination_time_hrs" class="form-control" placeholder="8.0" value="8.0">
+                            <span style="font-size: 0.75rem; color: var(--text-muted);">Sudden drop below 5h signals rumen acidosis or bloat.</span>
+                        </div>
+                    </div>
+
+                    <div class="form-row" style="margin-top: 14px;">
+                        <!-- Resting Hours -->
+                        <div class="form-group">
+                            <label class="form-label" for="resting_hours">
+                                Resting / Lying Duration (hrs/day)
+                                <span style="font-size: 0.75rem; color: var(--text-muted); font-weight: normal;">(Normal: 8.5 - 12.5 hrs)</span>
+                            </label>
+                            <input type="number" step="0.5" min="0" max="24" id="resting_hours" name="resting_hours" class="form-control" placeholder="10.0" value="10.0">
+                        </div>
+
+                        <!-- Heart Rate -->
+                        <div class="form-group">
+                            <label class="form-label" for="heart_rate_bpm">
+                                Heart Rate (bpm)
+                                <span style="font-size: 0.75rem; color: var(--text-muted); font-weight: normal;">(Normal: 50 - 78 bpm)</span>
+                            </label>
+                            <input type="number" step="1" min="30" max="150" id="heart_rate_bpm" name="heart_rate_bpm" class="form-control" placeholder="64" value="64">
+                        </div>
+
+                        <!-- Respiratory Rate -->
+                        <div class="form-group">
+                            <label class="form-label" for="respiratory_rate">
+                                Respiratory Rate (breaths/min)
+                                <span style="font-size: 0.75rem; color: var(--text-muted); font-weight: normal;">(Normal: 20 - 32 bpm)</span>
+                            </label>
+                            <input type="number" step="1" min="10" max="90" id="respiratory_rate" name="respiratory_rate" class="form-control" placeholder="25" value="25">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Symptom Checklist -->
+                <div style="margin-bottom: 24px;">
+                    <div style="display: flex; justify-content: space-between; align-items: baseline;">
+                        <h4 style="font-size: 1rem; color: var(--brand-primary);">
+                            <i class="bi bi-check2-square"></i> 3. Clinical Symptom Checklist
+                        </h4>
+                        <span style="font-size: 0.8rem; color: var(--text-muted);">Check all visible anomalies observed today</span>
+                    </div>
+
+                    <div class="symptom-grid">
+                        {% for sym in symptoms %}
+                            <label class="symptom-item" for="sym_{{ sym.code }}">
+                                <input type="checkbox" id="sym_{{ sym.code }}" name="symptoms" value="{{ sym.code }}">
+                                <span class="symptom-label">{{ sym.display_name }}</span>
+                            </label>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <!-- Free text for other symptoms -->
+                <div class="form-group">
+                    <label class="form-label" for="other_symptoms">Add Other Symptoms or Observations (Free-Text)</label>
+                    <textarea id="other_symptoms" name="other_symptoms" class="form-control" rows="2" placeholder="e.g. Unusual vocalization, abnormal eye discharge, lethargy..."></textarea>
+                </div>
+
+                <!-- Explainability Banner -->
+                <div class="explain-box">
+                    <h4><i class="bi bi-cpu-fill"></i> Explainable Multi-Layer Screening & Dataset Benchmark Pipeline</h4>
+                    <p style="color: var(--text-secondary); font-size: 0.88rem;">
+                        Upon submission, your entry is compared against standard <strong>required bovine everyday baselines</strong> (water, feed, rumination, temperature, physical activity) and cross-referenced with the <strong>250,000-record Global Cattle Disease Dataset</strong>. You will receive an instant <strong>Everyday Requirements Comparison & Disease Classification Report</strong> with actionable health indices.
+                    </p>
+                </div>
+
+                <div style="display: flex; justify-content: flex-end; gap: 14px; margin-top: 24px;">
+                    <a href="{{ url_for('farmer.dashboard') }}" class="btn btn-outline">Cancel</a>
+                    <button type="submit" class="btn btn-primary" style="padding: 12px 28px; font-size: 1rem;">
+                        <i class="bi bi-send-check"></i> Evaluate & Compare Requirements
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const tempInput = document.getElementById('temperatureInput');
+    const notice = document.getElementById('tempClinicalNotice');
+
+    function checkTemp() {
+        const val = parseFloat(tempInput.value);
+        if (isNaN(val)) {
+            notice.innerHTML = '';
+            return;
+        }
+        if (val > 39.5) {
+            notice.innerHTML = '<span style="color: #dc2626; font-weight: 700;"><i class="bi bi-exclamation-triangle-fill"></i> High Fever (> 39.5°C) — Matches systemic infection, FMD, or Acute Mastitis.</span>';
+        } else if (val < 38.0) {
+            notice.innerHTML = '<span style="color: #d97706; font-weight: 700;"><i class="bi bi-thermometer-snow"></i> Hypothermia (< 38.0°C) — Critical warning for Milk Fever (Downer Cow) / Calcium collapse.</span>';
+        } else if (val >= 38.2 && val <= 39.3) {
+            notice.innerHTML = '<span style="color: #16a34a; font-weight: 600;"><i class="bi bi-check-circle-fill"></i> Normal Healthy Bovine Range (38.2 - 39.3°C).</span>';
+        } else {
+            notice.innerHTML = '<span style="color: #d97706;"><i class="bi bi-info-circle"></i> Borderline temperature reading.</span>';
+        }
+    }
+
+    if (tempInput) {
+        tempInput.addEventListener('input', checkTemp);
+        checkTemp();
+    }
+});
+</script>
+{% endblock %}
